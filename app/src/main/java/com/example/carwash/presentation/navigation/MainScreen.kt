@@ -3,12 +3,10 @@ package com.example.carwash.presentation.navigation
 import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.BottomAppBar
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -52,47 +50,38 @@ fun MainScreen() {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    val navigationItems = listOf(
-        Screen.Dashboard,
-        Screen.Orders,
-        Screen.Settings
-    )
+    val navigationItems = listOf(Screen.Dashboard, Screen.Orders, Screen.Settings)
 
     Scaffold(
-        bottomBar = {
-            BottomAppBar {
-                navigationItems.forEach { screen ->
-                    screen.icon?.let {
-                        NavigationBarItem(
-                            icon = { Icon(it, contentDescription = screen.title) },
-                            label = { Text(screen.title) },
-                            selected = currentRoute == screen.route,
-                            onClick = {
-                                navController.navigate(screen.route) {
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        saveState = true
+            bottomBar = {
+                BottomAppBar {
+                    navigationItems.forEach { screen ->
+                        screen.icon?.let {
+                            NavigationBarItem(
+                                    icon = { Icon(it, contentDescription = screen.title) },
+                                    label = { Text(screen.title) },
+                                    selected = currentRoute == screen.route,
+                                    onClick = {
+                                        navController.navigate(screen.route) {
+                                            popUpTo(navController.graph.findStartDestination().id) {
+                                                saveState = true
+                                            }
+                                            launchSingleTop = true
+                                            restoreState = true
+                                        }
                                     }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            }
-                        )
+                            )
+                        }
                     }
                 }
-            }
-        },
-        floatingActionButton = {
-            FloatingActionButton(onClick = { navController.navigate(ADD_ORDER_GRAPH_ROUTE) }) {
-                Icon(Icons.Default.Add, contentDescription = "Add Order")
-            }
-        }
+            },
     ) { paddingValues ->
         NavHost(
-            navController = navController,
-            startDestination = Screen.Dashboard.route,
-            modifier = Modifier.padding(paddingValues)
+                navController = navController,
+                startDestination = Screen.Dashboard.route,
+                modifier = Modifier.padding(paddingValues)
         ) {
-            composable(Screen.Dashboard.route) { DashboardScreen() }
+            composable(Screen.Dashboard.route) { DashboardScreen(navController = navController) }
             composable(Screen.Orders.route) { Text(text = "Orders Screen") } // Placeholder
             composable(Screen.Settings.route) { Text(text = "Settings Screen") } // Placeholder
 
@@ -104,15 +93,18 @@ fun MainScreen() {
 fun NavGraphBuilder.addOrderGraph(navController: androidx.navigation.NavController) {
     navigation(startDestination = Screen.AddOrderPhoto.route, route = ADD_ORDER_GRAPH_ROUTE) {
         composable(Screen.AddOrderPhoto.route) {
-            val viewModel: AddOrderViewModel = hiltViewModel(navController.getBackStackEntry(ADD_ORDER_GRAPH_ROUTE))
+            val viewModel: AddOrderViewModel =
+                    hiltViewModel(navController.getBackStackEntry(ADD_ORDER_GRAPH_ROUTE))
             PhotoCaptureScreen(navController = navController, viewModel = viewModel)
         }
         composable(Screen.AddOrderVehicle.route) {
-            val viewModel: AddOrderViewModel = hiltViewModel(navController.getBackStackEntry(ADD_ORDER_GRAPH_ROUTE))
+            val viewModel: AddOrderViewModel =
+                    hiltViewModel(navController.getBackStackEntry(ADD_ORDER_GRAPH_ROUTE))
             VehicleFormScreen(navController = navController, viewModel = viewModel)
         }
         composable(Screen.AddOrderServices.route) {
-            val viewModel: AddOrderViewModel = hiltViewModel(navController.getBackStackEntry(ADD_ORDER_GRAPH_ROUTE))
+            val viewModel: AddOrderViewModel =
+                    hiltViewModel(navController.getBackStackEntry(ADD_ORDER_GRAPH_ROUTE))
             ServicesScreen(navController = navController, viewModel = viewModel)
         }
     }

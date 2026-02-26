@@ -13,9 +13,6 @@ import javax.inject.Inject
 class OrderRemoteDataSource @Inject constructor(
     private val client: SupabaseClient
 ) {
-    /**
-     * Obtiene todas las órdenes con datos básicos, ordenadas por fecha descendente.
-     */
     suspend fun getAll(): List<OrderWithDetailsDto> {
         val zoneId = ZoneId.of("America/Lima")
         val today = LocalDate.now(zoneId)
@@ -43,10 +40,6 @@ class OrderRemoteDataSource @Inject constructor(
             .decodeList()
     }
 
-    /**
-     * Obtiene una orden con todos sus detalles expandidos:
-     * cliente, vehículo, items y staff asignado.
-     */
     suspend fun getByIdWithDetails(id: String): OrderWithDetailsDto =
         client.postgrest["orders"]
             .select(
@@ -64,9 +57,6 @@ class OrderRemoteDataSource @Inject constructor(
             }
             .decodeSingle()
 
-    /**
-     * Obtiene órdenes por estado (Pendiente, En Proceso, Cancelado, Entregado).
-     */
     suspend fun getByStatus(status: String): List<OrderDto> =
         client.postgrest["orders"]
             .select {
@@ -75,9 +65,6 @@ class OrderRemoteDataSource @Inject constructor(
             }
             .decodeList()
 
-    /**
-     * Obtiene las órdenes activas del día (Pendiente / En Proceso).
-     */
     suspend fun getActiveOrders(): List<OrderWithDetailsDto> =
         client.postgrest["orders"]
             .select(
@@ -119,9 +106,6 @@ class OrderRemoteDataSource @Inject constructor(
 
     // ── Inserts ───────────────────────────────
 
-    /**
-     * Crea la cabecera de la orden y retorna la orden creada con su ID.
-     */
     suspend fun createOrder(dto: CreateOrderDto): OrderDto =
         client.postgrest["orders"]
             .insert(dto) { select() }
@@ -149,9 +133,6 @@ class OrderRemoteDataSource @Inject constructor(
             .insert(mapOf("order_id" to orderId, "url" to url)) { select() }
             .decodeSingle()
 
-    /**
-     * Actualiza el estado de la orden y registra el cambio en el historial.
-     */
     suspend fun updateStatus(id: String, dto: UpdateOrderStatusDto) {
         client.postgrest["orders"]
             .update(dto) { filter { eq("id", id) } }
