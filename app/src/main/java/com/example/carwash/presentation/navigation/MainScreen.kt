@@ -22,11 +22,15 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.carwash.presentation.screens.dashboard.DashboardScreen
+import com.example.carwash.presentation.screens.profile.ProfileScreen
 import com.example.carwash.ui.theme.OnSurfaceDark
 import com.example.carwash.ui.theme.OrangePrimary
 import com.example.carwash.ui.theme.SurfaceDark
 
 sealed class Screen(val route: String, val title: String, val icon: ImageVector? = null) {
+    // Auth Screen
+    object Login : Screen("login", "Iniciar Sesión")
+
     // Main Screens (BottomNav)
     object Dashboard : Screen("dashboard", "Inicio", Icons.Default.Home)
     object Orders : Screen("orders", "Órdenes", Icons.Default.List)
@@ -89,7 +93,7 @@ fun MainScreen(onAddOrder: () -> Unit) {
             composable(Screen.Dashboard.route) { DashboardScreen(onAddOrder = onAddOrder) }
             composable(Screen.Orders.route) { Text(text = "Orders Screen") }
             composable(Screen.Inventory.route) { Text(text = "Inventario Screen") }
-            composable(Screen.Profile.route) { Text(text = "Perfil Screen") }
+            composable(Screen.Profile.route) { ProfileScreen() }
         }
     }
 }

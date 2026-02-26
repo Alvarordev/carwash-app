@@ -16,7 +16,7 @@ navigationCompose = "2.9.7"
 supabaseBom = "3.3.0"
 ksp = "2.2.21-2.0.5"
 camerax = "1.5.3"
-accompanist = "0.34.0"
+accompanist = "0.37.3"
 
 [libraries]
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
@@ -42,6 +42,7 @@ ktor-client-android = { group = "io.ktor", name = "ktor-client-android", version
 supabase-bom = { group = "io.github.jan-tennert.supabase", name = "bom", version.ref = "supabaseBom" }
 supabase-postgrest = { group = "io.github.jan-tennert.supabase", name = "postgrest-kt" }
 supabase-storage = { group = "io.github.jan-tennert.supabase", name = "storage-kt" }
+supabase-auth = { group = "io.github.jan-tennert.supabase", name = "auth-kt"}
 androidx-compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
 
 # CameraX

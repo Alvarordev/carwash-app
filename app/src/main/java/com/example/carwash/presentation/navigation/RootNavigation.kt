@@ -13,16 +13,49 @@ import com.example.carwash.presentation.screens.addorder.OrderSummaryScreen
 import com.example.carwash.presentation.screens.addorder.PhotoCaptureScreen
 import com.example.carwash.presentation.screens.addorder.ServicesScreen
 import com.example.carwash.presentation.screens.addorder.VehicleFormScreen
+import com.example.carwash.presentation.screens.auth.LoginScreen
 import com.example.carwash.presentation.viewmodel.AddOrderViewModel
+import com.example.carwash.presentation.viewmodel.AuthViewModel
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import io.github.jan.supabase.auth.status.SessionStatus
 
 const val MAIN_ROUTE = "main"
 const val ADD_ORDER_GRAPH_ROUTE = "add_order_graph"
+const val AUTH_GRAPH_ROUTE = "auth_graph"
 
 @Composable
-fun RootNavigation() {
+fun RootNavigation(authViewModel: AuthViewModel = hiltViewModel()) {
     val rootNavController = rememberNavController()
+    val sessionStatus by authViewModel.sessionStatus.collectAsState()
 
-    NavHost(navController = rootNavController, startDestination = MAIN_ROUTE) {
+    if (sessionStatus is SessionStatus.Initializing) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+        return
+    }
+
+    val startRoute = if (sessionStatus is SessionStatus.Authenticated) {
+        MAIN_ROUTE
+    } else {
+        AUTH_GRAPH_ROUTE
+    }
+
+    NavHost(navController = rootNavController, startDestination = startRoute) {
+        // Auth Graph
+        navigation(route = AUTH_GRAPH_ROUTE, startDestination = Screen.Login.route) {
+            composable(Screen.Login.route) {
+                LoginScreen(viewModel = authViewModel)
+            }
+        }
+
+        // Protected Main Graph
         composable(MAIN_ROUTE) {
             MainScreen(onAddOrder = { rootNavController.navigate(ADD_ORDER_GRAPH_ROUTE) })
         }
