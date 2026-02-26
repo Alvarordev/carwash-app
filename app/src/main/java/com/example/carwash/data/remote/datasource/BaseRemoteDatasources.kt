@@ -109,10 +109,19 @@ class VehicleRemoteDataSource @Inject constructor(
             }
             .decodeList()
 
-    suspend fun insert(dto: VehicleDto): VehicleDto =
-        client.postgrest["vehicles"]
-            .insert(dto) { select() }
+    suspend fun insert(dto: VehicleDto): VehicleDto {
+        val body = VehicleInsertDto(
+            plate = dto.plate,
+            color = dto.color,
+            brand = dto.brand,
+            model = dto.model,
+            vehicleTypeId = dto.vehicleTypeId,
+            status = dto.status
+        )
+        return client.postgrest["vehicles"]
+            .insert(body) { select() }
             .decodeSingle()
+    }
 
     suspend fun update(id: String, dto: VehicleDto) {
         client.postgrest["vehicles"]

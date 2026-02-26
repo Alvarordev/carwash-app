@@ -1,5 +1,7 @@
 package com.example.carwash.di
 
+import android.content.ContentResolver
+import android.content.Context
 import com.example.carwash.BuildConfig
 import com.example.carwash.data.remote.datasource.*
 import com.example.carwash.data.repository.*
@@ -7,6 +9,7 @@ import com.example.carwash.domain.repository.*
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.createSupabaseClient
@@ -21,81 +24,101 @@ object AppModule {
     @Provides
     @Singleton
     fun provideSupabaseClient(): SupabaseClient =
-        createSupabaseClient(
-            supabaseUrl = BuildConfig.SUPABASE_URL,
-            supabaseKey = BuildConfig.SUPABASE_KEY
-        ) {
-            install(Postgrest)
-            install(Storage)
-        }
+            createSupabaseClient(
+                    supabaseUrl = BuildConfig.SUPABASE_URL,
+                    supabaseKey = BuildConfig.SUPABASE_KEY
+            ) {
+                install(Postgrest)
+                install(Storage)
+            }
 
-    @Provides @Singleton
+    @Provides
+    @Singleton
     fun provideOrderDataSource(client: SupabaseClient) = OrderRemoteDataSource(client)
 
-    @Provides @Singleton
+    @Provides
+    @Singleton
     fun provideCustomerDataSource(client: SupabaseClient) = CustomerRemoteDataSource(client)
 
-    @Provides @Singleton
+    @Provides
+    @Singleton
     fun provideVehicleDataSource(client: SupabaseClient) = VehicleRemoteDataSource(client)
 
-    @Provides @Singleton
+    @Provides
+    @Singleton
     fun provideStaffDataSource(client: SupabaseClient) = StaffRemoteDataSource(client)
 
-    @Provides @Singleton
+    @Provides
+    @Singleton
     fun provideServiceDataSource(client: SupabaseClient) = ServiceRemoteDataSource(client)
 
-    @Provides @Singleton
-    fun provideServicePricingDataSource(client: SupabaseClient) = ServicePricingRemoteDataSource(client)
+    @Provides
+    @Singleton
+    fun provideServicePricingDataSource(client: SupabaseClient) =
+            ServicePricingRemoteDataSource(client)
 
-    @Provides @Singleton
+    @Provides
+    @Singleton
     fun provideInventoryDataSource(client: SupabaseClient) = InventoryRemoteDataSource(client)
 
-    @Provides @Singleton
+    @Provides
+    @Singleton
     fun providePromotionDataSource(client: SupabaseClient) = PromotionRemoteDataSource(client)
 
-    @Provides @Singleton
+    @Provides
+    @Singleton
     fun provideVehicleTypeDataSource(client: SupabaseClient) = VehicleTypeRemoteDataSource(client)
 
-    @Provides @Singleton
+    @Provides
+    @Singleton
+    fun provideContentResolver(@ApplicationContext context: Context): ContentResolver =
+            context.contentResolver
+
+    @Provides
+    @Singleton
     fun provideOrderRepository(
-        orderDataSource: OrderRemoteDataSource,
-        staffDataSource: StaffRemoteDataSource,
-        photoDataSource: PhotoRemoteDataSource
-    ): OrderRepository = OrderRepositoryImpl(orderDataSource, staffDataSource, photoDataSource)
+            orderDataSource: OrderRemoteDataSource,
+            staffDataSource: StaffRemoteDataSource,
+            photoDataSource: PhotoRemoteDataSource,
+            contentResolver: ContentResolver
+    ): OrderRepository =
+            OrderRepositoryImpl(orderDataSource, staffDataSource, photoDataSource, contentResolver)
 
-    @Provides @Singleton
-    fun provideCustomerRepository(
-        dataSource: CustomerRemoteDataSource
-    ): CustomerRepository = CustomerRepositoryImpl(dataSource)
+    @Provides
+    @Singleton
+    fun provideCustomerRepository(dataSource: CustomerRemoteDataSource): CustomerRepository =
+            CustomerRepositoryImpl(dataSource)
 
-    @Provides @Singleton
-    fun provideVehicleRepository(
-        dataSource: VehicleRemoteDataSource
-    ): VehicleRepository = VehicleRepositoryImpl(dataSource)
+    @Provides
+    @Singleton
+    fun provideVehicleRepository(dataSource: VehicleRemoteDataSource): VehicleRepository =
+            VehicleRepositoryImpl(dataSource)
 
-    @Provides @Singleton
-    fun provideStaffRepository(
-        dataSource: StaffRemoteDataSource
-    ): StaffRepository = StaffRepositoryImpl(dataSource)
+    @Provides
+    @Singleton
+    fun provideStaffRepository(dataSource: StaffRemoteDataSource): StaffRepository =
+            StaffRepositoryImpl(dataSource)
 
-    @Provides @Singleton
+    @Provides
+    @Singleton
     fun provideVehicleTypeRepository(
-        dataSource: VehicleTypeRemoteDataSource
+            dataSource: VehicleTypeRemoteDataSource
     ): VehicleTypeRepository = VehicleTypeRepositoryImpl(dataSource)
 
-    @Provides @Singleton
+    @Provides
+    @Singleton
     fun provideServiceRepository(
-        serviceDataSource: ServiceRemoteDataSource,
-        pricingDataSource: ServicePricingRemoteDataSource
+            serviceDataSource: ServiceRemoteDataSource,
+            pricingDataSource: ServicePricingRemoteDataSource
     ): ServiceRepository = ServiceRepositoryImpl(serviceDataSource, pricingDataSource)
 
-    @Provides @Singleton
-    fun providePromotionRepository(
-        dataSource: PromotionRemoteDataSource
-    ): PromotionRepository = PromotionRepositoryImpl(dataSource)
+    @Provides
+    @Singleton
+    fun providePromotionRepository(dataSource: PromotionRemoteDataSource): PromotionRepository =
+            PromotionRepositoryImpl(dataSource)
 
-    @Provides @Singleton
-    fun provideInventoryRepository(
-        dataSource: InventoryRemoteDataSource
-    ): InventoryRepository = InventoryRepositoryImpl(dataSource)
+    @Provides
+    @Singleton
+    fun provideInventoryRepository(dataSource: InventoryRemoteDataSource): InventoryRepository =
+            InventoryRepositoryImpl(dataSource)
 }

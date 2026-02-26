@@ -41,14 +41,14 @@ class VehicleRepositoryImpl @Inject constructor(
     }
 
     private fun Vehicle.toDto() = VehicleDto(
-        id = id,
+        id = id.ifBlank { null },    // null → DB generates UUID on insert
         plate = plate,
         color = color,
         brand = brand,
         model = model,
         vehicleTypeId = vehicleTypeId,
         status = if (status == EntityStatus.Active) "active" else "inactive",
-        createdAt = createdAt.toString(),
-        updatedAt = updatedAt.toString()
+        createdAt = if (createdAt != null) createdAt.toString() else null,
+        updatedAt = if (updatedAt != null) updatedAt.toString() else null
     )
 }

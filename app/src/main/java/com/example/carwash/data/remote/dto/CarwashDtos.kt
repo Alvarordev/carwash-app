@@ -69,15 +69,15 @@ data class ServicePricingDto(
 
 @Serializable
 data class VehicleDto(
-    val id: String,
+    val id: String? = null,   // null on insert → DB generates UUID
     val plate: String,
     val color: String,
     val brand: String,
     val model: String? = null,
     @SerialName("vehicle_type_id") val vehicleTypeId: String,
     val status: String,
-    @SerialName("created_at") val createdAt: String,
-    @SerialName("updated_at") val updatedAt: String
+    @SerialName("created_at") val createdAt: String? = null,
+    @SerialName("updated_at") val updatedAt: String? = null
 )
 
 @Serializable
@@ -98,6 +98,16 @@ data class InventoryItemDto(
     val status: String,
     @SerialName("created_at") val createdAt: String,
     @SerialName("updated_at") val updatedAt: String
+)
+
+@Serializable
+data class VehicleInsertDto(
+    val plate: String,
+    val color: String,
+    val brand: String,
+    val model: String? = null,
+    @SerialName("vehicle_type_id") val vehicleTypeId: String,
+    val status: String = "active"
 )
 
 @Serializable

@@ -22,20 +22,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavController
 import com.example.carwash.presentation.components.OrderCard
-import com.example.carwash.presentation.navigation.ADD_ORDER_GRAPH_ROUTE
 import com.example.carwash.presentation.viewmodel.DashboardViewModel
 
 @Composable
-fun DashboardScreen(navController: NavController, viewModel: DashboardViewModel = hiltViewModel()) {
+fun DashboardScreen(onAddOrder: () -> Unit, viewModel: DashboardViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsState()
-
-    println(uiState.deliveredOrders)
 
     Scaffold(
             floatingActionButton = {
-                FloatingActionButton(onClick = { navController.navigate(ADD_ORDER_GRAPH_ROUTE) }) {
+                FloatingActionButton(onClick = onAddOrder) {
                     Icon(Icons.Default.Add, contentDescription = "Agregar orden")
                 }
             }

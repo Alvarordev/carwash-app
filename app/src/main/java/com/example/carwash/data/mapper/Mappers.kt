@@ -17,10 +17,6 @@ import com.example.carwash.domain.model.*
 import java.time.LocalDate
 import java.time.OffsetDateTime
 
-// ──────────────────────────────────────────────
-// Helpers de conversión de tipos
-// ──────────────────────────────────────────────
-
 private fun String.toOffsetDateTime(): OffsetDateTime =
     OffsetDateTime.parse(this)
 
@@ -83,10 +79,6 @@ private fun String?.toPaymentStatus(): PaymentStatus? = when (this) {
     else -> null
 }
 
-// ──────────────────────────────────────────────
-// Extensiones de mapeo DTO → Domain
-// ──────────────────────────────────────────────
-
 fun CustomerDto.toDomain() = Customer(
     id = id,
     firstName = firstName,
@@ -110,15 +102,15 @@ fun VehicleTypeDto.toDomain() = VehicleType(
 )
 
 fun VehicleDto.toDomain() = Vehicle(
-    id = id,
+    id = id.orEmpty(),
     plate = plate,
     color = color,
     brand = brand,
     model = model,
     vehicleTypeId = vehicleTypeId,
     status = status.toEntityStatus(),
-    createdAt = createdAt.toOffsetDateTime(),
-    updatedAt = updatedAt.toOffsetDateTime()
+    createdAt = createdAt?.toOffsetDateTime() ?: OffsetDateTime.now(),
+    updatedAt = updatedAt?.toOffsetDateTime() ?: OffsetDateTime.now()
 )
 
 fun StaffMemberDto.toDomain() = StaffMember(
