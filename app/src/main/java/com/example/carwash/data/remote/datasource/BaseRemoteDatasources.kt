@@ -7,6 +7,23 @@ import io.github.jan.supabase.postgrest.query.Columns
 import io.github.jan.supabase.postgrest.query.filter.FilterOperator
 import javax.inject.Inject
 
+class CompanyRemoteDataSource @Inject constructor(
+    private val client: SupabaseClient
+) {
+    /** Returns the single company accessible to the current user (filtered by RLS). */
+    suspend fun getMyCompany(): CompanyDto =
+        client.postgrest["companies"]
+            .select()
+            .decodeSingle()
+
+    /** Finds the staff member record matching the given email to resolve company context. */
+    suspend fun getStaffByEmail(email: String): StaffMemberDto? =
+        client.postgrest["staff_members"]
+            .select { filter { eq("email", email) } }
+            .decodeList<StaffMemberDto>()
+            .firstOrNull()
+}
+
 class CustomerRemoteDataSource @Inject constructor(
     private val client: SupabaseClient
 ) {
@@ -116,7 +133,8 @@ class VehicleRemoteDataSource @Inject constructor(
             brand = dto.brand,
             model = dto.model,
             vehicleTypeId = dto.vehicleTypeId,
-            status = dto.status
+            status = dto.status,
+            companyId = dto.companyId ?: error("company_id required for vehicle insert")
         )
         return client.postgrest["vehicles"]
             .insert(body) { select() }
@@ -128,9 +146,9 @@ class VehicleRemoteDataSource @Inject constructor(
             .update(dto) { filter { eq("id", id) } }
     }
 
-    suspend fun linkOwner(vehicleId: String, customerId: String) {
+    suspend fun linkOwner(vehicleId: String, customerId: String, companyId: String) {
         client.postgrest["vehicle_owners"]
-            .insert(mapOf("vehicle_id" to vehicleId, "customer_id" to customerId))
+            .insert(mapOf("vehicle_id" to vehicleId, "customer_id" to customerId, "company_id" to companyId))
     }
 }
 

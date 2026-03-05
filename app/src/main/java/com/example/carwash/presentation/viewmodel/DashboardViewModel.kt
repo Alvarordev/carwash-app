@@ -10,8 +10,10 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 
 data class DashboardUiState(
         val pendingInProgressOrders: List<Order> = emptyList(),
@@ -24,7 +26,7 @@ data class DashboardUiState(
     val inProgressCount: Int
         get() = pendingInProgressOrders.count { it.status == OrderStatus.EnProceso }
     val pendingCount: Int
-        get() = pendingInProgressOrders.count { it.status == OrderStatus.Pendiente }
+        get() = pendingInProgressOrders.count { it.status == OrderStatus.Terminado }
     val totalTodayCount: Int
         get() = todayCompletedCount + pendingInProgressOrders.size
 }
@@ -38,39 +40,34 @@ constructor(private val getTodayOrdersUseCase: GetTodayOrdersUseCase) : ViewMode
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
 
     init {
-        loadOrders()
-    }
-
-    fun loadOrders() {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-
-            getTodayOrdersUseCase()
-                    .onSuccess { todayOrders ->
+        getTodayOrdersUseCase()
+            .onEach { result ->
+                result
+                    .onSuccess { orders ->
                         _uiState.update {
                             it.copy(
-                                    pendingInProgressOrders =
-                                            todayOrders.filter { order ->
-                                                order.status == OrderStatus.EnProceso ||
-                                                        order.status == OrderStatus.Pendiente
-                                            },
-                                    deliveredOrders =
-                                            todayOrders.filter { order ->
-                                                order.status == OrderStatus.Entregado
-                                            },
-                                    isLoading = false,
-                                    errorMessage = null
+                                pendingInProgressOrders = orders.filter { o ->
+                                    o.status == OrderStatus.EnProceso || o.status == OrderStatus.Terminado
+                                },
+                                deliveredOrders = orders.filter { o ->
+                                    o.status == OrderStatus.Entregado
+                                },
+                                isLoading = false,
+                                errorMessage = null
                             )
                         }
                     }
-                    .onFailure { error ->
+                    .onFailure { err ->
                         _uiState.update {
-                            it.copy(
-                                    isLoading = false,
-                                    errorMessage = error.message ?: "Error al cargar las órdenes"
-                            )
+                            it.copy(isLoading = false, errorMessage = err.message ?: "Error al cargar las órdenes")
                         }
                     }
-        }
+            }
+            .catch { err ->
+                _uiState.update {
+                    it.copy(isLoading = false, errorMessage = err.message ?: "Error al cargar las órdenes")
+                }
+            }
+            .launchIn(viewModelScope)
     }
 }

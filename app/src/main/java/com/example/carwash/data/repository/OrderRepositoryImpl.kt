@@ -12,13 +12,20 @@ import com.example.carwash.data.remote.dto.CreateOrderStaffDto
 import com.example.carwash.data.remote.dto.OrderStatus
 import com.example.carwash.data.remote.dto.PaymentStatus
 import com.example.carwash.data.remote.dto.UpdateOrderStatusDto
+import com.example.carwash.data.session.CompanySession
 import com.example.carwash.domain.model.CreateOrderRequest
 import com.example.carwash.domain.model.Order
+import com.example.carwash.domain.model.OrderPeriod
 import com.example.carwash.domain.model.OrderStatusHistory
 import com.example.carwash.domain.repository.OrderRepository
+import java.time.DayOfWeek
+import java.time.LocalDate
+import java.time.ZoneId
 import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 
 class OrderRepositoryImpl
 @Inject
@@ -26,7 +33,8 @@ constructor(
         private val orderDataSource: OrderRemoteDataSource,
         private val staffDataSource: StaffRemoteDataSource,
         private val photoDataSource: PhotoRemoteDataSource,
-        private val contentResolver: ContentResolver
+        private val contentResolver: ContentResolver,
+        private val companySession: CompanySession
 ) : OrderRepository {
 
     override suspend fun getOrders(): Result<List<Order>> = runCatching {
@@ -37,6 +45,11 @@ constructor(
         emit(orderDataSource.getActiveOrders().map { it.toDomain() })
     }
 
+    override fun observeTodayOrders(): Flow<Result<List<Order>>> =
+        orderDataSource.observeTodayOrders()
+            .map { dtos -> Result.success(dtos.map { it.toDomain() }) }
+            .catch { e -> emit(Result.failure(e)) }
+
     override suspend fun getOrderById(id: String): Result<Order> = runCatching {
         orderDataSource.getByIdWithDetails(id).toDomain()
     }
@@ -45,7 +58,9 @@ constructor(
         val statusStr =
                 when (status) {
                     OrderStatus.En_Proceso -> "En Proceso"
-                    else -> status.name
+                    OrderStatus.Terminado -> "Terminado"
+                    OrderStatus.Cancelado -> "Cancelado"
+                    OrderStatus.Entregado -> "Entregado"
                 }
         orderDataSource.getByStatus(statusStr).map { it.toDomain() }
     }
@@ -61,6 +76,7 @@ constructor(
             }
 
     override suspend fun addOrder(order: CreateOrderRequest): Result<Order> = runCatching {
+        val companyId = companySession.companyId ?: error("Company session not resolved")
         val subtotal = order.items.sumOf { it.subtotal }
         val orderNumber = generateOrderNumber()
 
@@ -91,6 +107,7 @@ constructor(
                 orderDataSource.createOrder(
                         CreateOrderDto(
                                 orderNumber = orderNumber,
+                                companyId = companyId,
                                 customerId = order.customerId,
                                 vehicleId = order.vehicleId,
                                 cashierId = order.cashierId,
@@ -107,6 +124,7 @@ constructor(
                 order.items.map { item ->
                     CreateOrderItemDto(
                             orderId = created.id,
+                            companyId = companyId,
                             serviceId = item.serviceId,
                             serviceName = item.serviceName,
                             unitPrice = item.unitPrice,
@@ -123,6 +141,7 @@ constructor(
                         runCatching { staffDataSource.getById(staffId) }.getOrNull()?.let { staff ->
                             CreateOrderStaffDto(
                                     orderId = created.id,
+                                    companyId = companyId,
                                     staffId = staff.id,
                                     staffName = "${staff.firstName} ${staff.lastName}",
                                     roleSnapshot = staff.role
@@ -135,7 +154,8 @@ constructor(
         // 5. Record initial status in history
         orderDataSource.addStatusHistory(
                 orderId = created.id,
-                status = "Pendiente",
+                status = "En Proceso",
+                companyId = companyId,
                 changedBy = order.cashierId
         )
 
@@ -149,15 +169,19 @@ constructor(
             changedBy: String?,
             note: String?
     ): Result<Unit> = runCatching {
+        val companyId = companySession.companyId ?: error("Company session not resolved")
         val statusStr =
                 when (status) {
                     OrderStatus.En_Proceso -> "En Proceso"
-                    else -> status.name
+                    OrderStatus.Terminado -> "Terminado"
+                    OrderStatus.Cancelado -> "Cancelado"
+                    OrderStatus.Entregado -> "Entregado"
                 }
         orderDataSource.updateStatus(orderId, UpdateOrderStatusDto(status = statusStr))
         orderDataSource.addStatusHistory(
                 orderId = orderId,
                 status = statusStr,
+                companyId = companyId,
                 changedBy = changedBy,
                 note = note
         )
@@ -168,6 +192,7 @@ constructor(
             reason: String,
             changedBy: String?
     ): Result<Unit> = runCatching {
+        val companyId = companySession.companyId ?: error("Company session not resolved")
         orderDataSource.updateStatus(
                 orderId,
                 UpdateOrderStatusDto(status = "Cancelado", cancelReason = reason)
@@ -175,6 +200,7 @@ constructor(
         orderDataSource.addStatusHistory(
                 orderId = orderId,
                 status = "Cancelado",
+                companyId = companyId,
                 changedBy = changedBy,
                 note = reason
         )
@@ -185,6 +211,7 @@ constructor(
             paymentMethod: String,
             paymentStatus: PaymentStatus
     ): Result<Unit> = runCatching {
+        val companyId = companySession.companyId ?: error("Company session not resolved")
         val paymentStr = paymentStatus.name.lowercase()
         orderDataSource.updatePayment(orderId, paymentStr, paymentMethod)
         if (paymentStatus == PaymentStatus.pagado) {
@@ -199,10 +226,58 @@ constructor(
             orderDataSource.addStatusHistory(
                     orderId = orderId,
                     status = "Entregado",
+                    companyId = companyId,
                     changedBy = null,
                     note = "Pago registrado: $paymentMethod"
             )
         }
+    }
+
+    override suspend fun updateOrderStaff(
+        orderId: String,
+        toAdd: List<String>,
+        toRemove: List<String>
+    ): Result<Unit> = runCatching {
+        val companyId = companySession.companyId ?: error("Company session not resolved")
+        toRemove.forEach { orderStaffId -> orderDataSource.removeStaffFromOrder(orderStaffId) }
+        val staffDtos = toAdd.mapNotNull { staffId ->
+            runCatching { staffDataSource.getById(staffId) }.getOrNull()?.let { staff ->
+                CreateOrderStaffDto(
+                    orderId = orderId,
+                    companyId = companyId,
+                    staffId = staff.id,
+                    staffName = "${staff.firstName} ${staff.lastName}",
+                    roleSnapshot = staff.role
+                )
+            }
+        }
+        if (staffDtos.isNotEmpty()) orderDataSource.assignStaffBatch(staffDtos)
+    }
+
+    override fun observeOrdersByPeriod(period: OrderPeriod): Flow<Result<List<Order>>> {
+        val zoneId = ZoneId.of("America/Lima")
+        val today = LocalDate.now(zoneId)
+        val endIso = today.atTime(23, 59, 59).atZone(zoneId).toOffsetDateTime().toString()
+        val startIso = when (period) {
+            OrderPeriod.Today     -> today.atStartOfDay(zoneId).toOffsetDateTime().toString()
+            OrderPeriod.ThisWeek  -> today.with(DayOfWeek.MONDAY).atStartOfDay(zoneId).toOffsetDateTime().toString()
+            OrderPeriod.ThisMonth -> today.withDayOfMonth(1).atStartOfDay(zoneId).toOffsetDateTime().toString()
+        }
+        return orderDataSource.observeOrdersByPeriod(startIso, endIso)
+            .map { dtos -> Result.success(dtos.map { it.toDomain() }) }
+            .catch { e -> emit(Result.failure(e)) }
+    }
+
+    override suspend fun getOrdersByPeriod(period: OrderPeriod): Result<List<Order>> = runCatching {
+        val zoneId = ZoneId.of("America/Lima")
+        val today = LocalDate.now(zoneId)
+        val endIso = today.atTime(23, 59, 59).atZone(zoneId).toOffsetDateTime().toString()
+        val startIso = when (period) {
+            OrderPeriod.Today     -> today.atStartOfDay(zoneId).toOffsetDateTime().toString()
+            OrderPeriod.ThisWeek  -> today.with(DayOfWeek.MONDAY).atStartOfDay(zoneId).toOffsetDateTime().toString()
+            OrderPeriod.ThisMonth -> today.withDayOfMonth(1).atStartOfDay(zoneId).toOffsetDateTime().toString()
+        }
+        orderDataSource.getAllForPeriod(startIso, endIso).map { it.toDomain() }
     }
 
     private fun generateOrderNumber(): String =

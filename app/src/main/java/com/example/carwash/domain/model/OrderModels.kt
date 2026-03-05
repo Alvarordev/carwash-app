@@ -61,7 +61,7 @@ data class Order(
         val staff: List<OrderStaff> = emptyList()
 ) {
     val isPending: Boolean
-        get() = status == OrderStatus.Pendiente
+        get() = status == OrderStatus.EnProceso
     val isInProgress: Boolean
         get() = status == OrderStatus.EnProceso
     val isCompleted: Boolean

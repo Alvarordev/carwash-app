@@ -5,13 +5,24 @@ import kotlinx.serialization.Serializable
 
 
 @Serializable
+data class CompanyDto(
+    val id: String,
+    val name: String,
+    val slug: String,
+    val status: String,
+    @SerialName("created_at") val createdAt: String,
+    @SerialName("updated_at") val updatedAt: String
+)
+
+@Serializable
 data class VehicleTypeDto(
     val id: String,
     val name: String,
     val description: String? = null,
     val status: String,
     @SerialName("created_at") val createdAt: String,
-    @SerialName("updated_at") val updatedAt: String
+    @SerialName("updated_at") val updatedAt: String,
+    @SerialName("company_id") val companyId: String? = null
 )
 
 
@@ -26,7 +37,8 @@ data class CustomerDto(
     val email: String? = null,
     val status: String,
     @SerialName("created_at") val createdAt: String,
-    @SerialName("updated_at") val updatedAt: String
+    @SerialName("updated_at") val updatedAt: String,
+    @SerialName("company_id") val companyId: String? = null
 )
 
 
@@ -42,7 +54,8 @@ data class StaffMemberDto(
     val email: String? = null,
     val status: String,
     @SerialName("created_at") val createdAt: String,
-    @SerialName("updated_at") val updatedAt: String
+    @SerialName("updated_at") val updatedAt: String,
+    @SerialName("company_id") val companyId: String? = null
 )
 
 @Serializable
@@ -53,7 +66,8 @@ data class ServiceDto(
     val category: String,
     val status: String,
     @SerialName("created_at") val createdAt: String,
-    @SerialName("updated_at") val updatedAt: String
+    @SerialName("updated_at") val updatedAt: String,
+    @SerialName("company_id") val companyId: String? = null
 )
 
 @Serializable
@@ -64,7 +78,8 @@ data class ServicePricingDto(
     val price: Double,
     val status: String,
     @SerialName("created_at") val createdAt: String,
-    @SerialName("updated_at") val updatedAt: String
+    @SerialName("updated_at") val updatedAt: String,
+    @SerialName("company_id") val companyId: String? = null
 )
 
 @Serializable
@@ -77,7 +92,8 @@ data class VehicleDto(
     @SerialName("vehicle_type_id") val vehicleTypeId: String,
     val status: String,
     @SerialName("created_at") val createdAt: String? = null,
-    @SerialName("updated_at") val updatedAt: String? = null
+    @SerialName("updated_at") val updatedAt: String? = null,
+    @SerialName("company_id") val companyId: String? = null
 )
 
 @Serializable
@@ -97,7 +113,8 @@ data class InventoryItemDto(
     @SerialName("min_quantity") val minQuantity: Double,
     val status: String,
     @SerialName("created_at") val createdAt: String,
-    @SerialName("updated_at") val updatedAt: String
+    @SerialName("updated_at") val updatedAt: String,
+    @SerialName("company_id") val companyId: String? = null
 )
 
 @Serializable
@@ -107,7 +124,8 @@ data class VehicleInsertDto(
     val brand: String,
     val model: String? = null,
     @SerialName("vehicle_type_id") val vehicleTypeId: String,
-    val status: String = "active"
+    val status: String = "active",
+    @SerialName("company_id") val companyId: String
 )
 
 @Serializable
@@ -122,7 +140,8 @@ data class PromotionDto(
     @SerialName("end_date") val endDate: String? = null,
     val status: String,
     @SerialName("created_at") val createdAt: String,
-    @SerialName("updated_at") val updatedAt: String
+    @SerialName("updated_at") val updatedAt: String,
+    @SerialName("company_id") val companyId: String? = null
 )
 
 @Serializable

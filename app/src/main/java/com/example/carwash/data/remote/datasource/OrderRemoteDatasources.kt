@@ -6,9 +6,19 @@ import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
 import io.github.jan.supabase.postgrest.query.Order
+import io.github.jan.supabase.realtime.PostgresAction
+import io.github.jan.supabase.realtime.channel
+import io.github.jan.supabase.realtime.postgresChangeFlow
+import io.github.jan.supabase.realtime.realtime
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
 
 class OrderRemoteDataSource @Inject constructor(
     private val client: SupabaseClient
@@ -38,6 +48,56 @@ class OrderRemoteDataSource @Inject constructor(
                 order("created_at", Order.DESCENDING)
             }
             .decodeList()
+    }
+
+    suspend fun getAllForPeriod(startIso: String, endIso: String): List<OrderWithDetailsDto> =
+        client.postgrest["orders"]
+            .select(
+                Columns.raw(
+                    """
+                    *,
+                    customers(*),
+                    vehicles(*),
+                    order_items(*),
+                    order_staff(*)
+                    """.trimIndent()
+                )
+            ) {
+                filter {
+                    gte("created_at", startIso)
+                    lte("created_at", endIso)
+                }
+                order("created_at", Order.DESCENDING)
+            }
+            .decodeList()
+
+    fun observeOrdersByPeriod(startIso: String, endIso: String): Flow<List<OrderWithDetailsDto>> =
+        callbackFlow {
+            trySend(getAllForPeriod(startIso, endIso))
+            val channel = client.channel("orders-period-${startIso.take(10)}-${System.currentTimeMillis()}")
+            val sub = channel
+                .postgresChangeFlow<PostgresAction>(schema = "public") { table = "orders" }
+                .onEach { trySend(getAllForPeriod(startIso, endIso)) }
+                .launchIn(this)
+            channel.subscribe()
+            awaitClose { sub.cancel(); launch { client.realtime.removeChannel(channel) } }
+        }
+
+    fun observeTodayOrders(): Flow<List<OrderWithDetailsDto>> = callbackFlow {
+        trySend(getAll())
+
+        val channel = client.channel("dashboard-orders")
+        val sub = channel
+            .postgresChangeFlow<PostgresAction>(schema = "public") { table = "orders" }
+            .onEach { trySend(getAll()) }
+            .launchIn(this)
+
+        channel.subscribe()
+
+        awaitClose {
+            sub.cancel()
+            launch { client.realtime.removeChannel(channel) }
+        }
     }
 
     suspend fun getByIdWithDetails(id: String): OrderWithDetailsDto =
@@ -80,8 +140,8 @@ class OrderRemoteDataSource @Inject constructor(
             ) {
                 filter {
                     or {
-                        eq("status", "Pendiente")
                         eq("status", "En Proceso")
+                        eq("status", "Terminado")
                     }
                 }
                 order("created_at", Order.DESCENDING)
@@ -128,9 +188,9 @@ class OrderRemoteDataSource @Inject constructor(
         client.postgrest["order_staff"].insert(staff)
     }
 
-    suspend fun addAttachment(orderId: String, url: String): OrderAttachmentDto =
+    suspend fun addAttachment(orderId: String, url: String, companyId: String): OrderAttachmentDto =
         client.postgrest["order_attachments"]
-            .insert(mapOf("order_id" to orderId, "url" to url)) { select() }
+            .insert(mapOf("order_id" to orderId, "url" to url, "company_id" to companyId)) { select() }
             .decodeSingle()
 
     suspend fun updateStatus(id: String, dto: UpdateOrderStatusDto) {
@@ -174,6 +234,7 @@ class OrderRemoteDataSource @Inject constructor(
     suspend fun addStatusHistory(
         orderId: String,
         status: String,
+        companyId: String,
         changedBy: String? = null,
         note: String? = null
     ) {
@@ -182,6 +243,7 @@ class OrderRemoteDataSource @Inject constructor(
                 buildMap {
                     put("order_id", orderId)
                     put("status", status)
+                    put("company_id", companyId)
                     changedBy?.let { put("changed_by", it) }
                     note?.let { put("note", it) }
                 }

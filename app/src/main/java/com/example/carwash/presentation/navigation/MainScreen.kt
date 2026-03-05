@@ -17,11 +17,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.example.carwash.presentation.screens.dashboard.DashboardScreen
+import com.example.carwash.presentation.screens.orders.OrderDetailsScreen
+import com.example.carwash.presentation.screens.orders.OrdersScreen
 import com.example.carwash.presentation.screens.profile.ProfileScreen
 import com.example.carwash.ui.theme.OnSurfaceDark
 import com.example.carwash.ui.theme.OrangePrimary
@@ -34,7 +38,6 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector?
     // Main Screens (BottomNav)
     object Dashboard : Screen("dashboard", "Inicio", Icons.Default.Home)
     object Orders : Screen("orders", "Órdenes", Icons.Default.List)
-    object Inventory : Screen("inventory", "Inventario", Icons.Default.Inventory2)
     object Profile : Screen("profile", "Perfil", Icons.Default.Person)
 
     // Add Order Wizard Steps
@@ -43,6 +46,9 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector?
     object AddOrderServices : Screen("add_order_services", "Servicios")
     object AddOrderObservations : Screen("add_order_observations", "Observaciones")
     object AddOrderSummary : Screen("add_order_summary", "Resumen")
+
+    // Order Detail
+    object OrderDetail : Screen("order_details/{orderId}", "Orden")
 }
 
 @Composable
@@ -51,35 +57,38 @@ fun MainScreen(onAddOrder: () -> Unit) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    val navigationItems = listOf(Screen.Dashboard, Screen.Orders, Screen.Inventory, Screen.Profile)
+    val navigationItems = listOf(Screen.Dashboard, Screen.Orders, Screen.Profile)
+    val showBottomBar = currentRoute != Screen.OrderDetail.route
 
     Scaffold(
             bottomBar = {
-                NavigationBar(containerColor = SurfaceDark) {
-                    navigationItems.forEach { screen ->
-                        screen.icon?.let { icon ->
-                            NavigationBarItem(
-                                    icon = { Icon(icon, contentDescription = screen.title) },
-                                    label = { Text(screen.title) },
-                                    selected = currentRoute == screen.route,
-                                    onClick = {
-                                        navController.navigate(screen.route) {
-                                            popUpTo(navController.graph.findStartDestination().id) {
-                                                saveState = true
+                if (showBottomBar) {
+                    NavigationBar(containerColor = SurfaceDark) {
+                        navigationItems.forEach { screen ->
+                            screen.icon?.let { icon ->
+                                NavigationBarItem(
+                                        icon = { Icon(icon, contentDescription = screen.title) },
+                                        label = { Text(screen.title) },
+                                        selected = currentRoute == screen.route,
+                                        onClick = {
+                                            navController.navigate(screen.route) {
+                                                popUpTo(navController.graph.findStartDestination().id) {
+                                                    saveState = true
+                                                }
+                                                launchSingleTop = true
+                                                restoreState = true
                                             }
-                                            launchSingleTop = true
-                                            restoreState = true
-                                        }
-                                    },
-                                    colors =
-                                            NavigationBarItemDefaults.colors(
-                                                    selectedIconColor = OrangePrimary,
-                                                    selectedTextColor = OrangePrimary,
-                                                    indicatorColor = SurfaceDark,
-                                                    unselectedIconColor = OnSurfaceDark,
-                                                    unselectedTextColor = OnSurfaceDark
-                                            )
-                            )
+                                        },
+                                        colors =
+                                                NavigationBarItemDefaults.colors(
+                                                        selectedIconColor = OrangePrimary,
+                                                        selectedTextColor = OrangePrimary,
+                                                        indicatorColor = SurfaceDark,
+                                                        unselectedIconColor = OnSurfaceDark,
+                                                        unselectedTextColor = OnSurfaceDark
+                                                )
+                                )
+                            }
                         }
                     }
                 }
@@ -91,9 +100,22 @@ fun MainScreen(onAddOrder: () -> Unit) {
                 modifier = Modifier.padding(paddingValues)
         ) {
             composable(Screen.Dashboard.route) { DashboardScreen(onAddOrder = onAddOrder) }
-            composable(Screen.Orders.route) { Text(text = "Orders Screen") }
-            composable(Screen.Inventory.route) { Text(text = "Inventario Screen") }
+            composable(Screen.Orders.route) {
+                OrdersScreen(
+                    onAddOrder = onAddOrder,
+                    onOrderClick = { orderId -> navController.navigate("order_details/$orderId") }
+                )
+            }
             composable(Screen.Profile.route) { ProfileScreen() }
+            composable(
+                route = Screen.OrderDetail.route,
+                arguments = listOf(navArgument("orderId") { type = NavType.StringType })
+            ) {
+                OrderDetailsScreen(
+                    onBack = { navController.popBackStack() },
+                    onSaveSuccess = { navController.popBackStack() }
+                )
+            }
         }
     }
 }

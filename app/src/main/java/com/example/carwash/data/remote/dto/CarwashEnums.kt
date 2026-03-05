@@ -37,8 +37,8 @@ enum class PromotionScopeType {
 }
 
 enum class OrderStatus {
-    Pendiente,
     En_Proceso,
+    Terminado,
     Cancelado,
     Entregado
 }

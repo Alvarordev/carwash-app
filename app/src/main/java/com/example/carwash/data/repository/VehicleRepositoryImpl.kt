@@ -3,6 +3,7 @@ package com.example.carwash.data.repository
 import com.example.carwash.data.mapper.toDomain
 import com.example.carwash.data.remote.datasource.VehicleRemoteDataSource
 import com.example.carwash.data.remote.dto.VehicleDto
+import com.example.carwash.data.session.CompanySession
 import com.example.carwash.domain.model.EntityStatus
 import com.example.carwash.domain.model.Vehicle
 import com.example.carwash.domain.repository.VehicleRepository
@@ -11,7 +12,8 @@ import kotlinx.coroutines.flow.flow
 import javax.inject.Inject
 
 class VehicleRepositoryImpl @Inject constructor(
-    private val dataSource: VehicleRemoteDataSource
+    private val dataSource: VehicleRemoteDataSource,
+    private val companySession: CompanySession
 ) : VehicleRepository {
 
     override fun getVehicles(): Flow<List<Vehicle>> = flow {
@@ -31,16 +33,17 @@ class VehicleRepositoryImpl @Inject constructor(
     }
 
     override suspend fun addVehicle(vehicle: Vehicle, customerId: String?): Result<Vehicle> = runCatching {
-        val created = dataSource.insert(vehicle.toDto()).toDomain()
-        customerId?.let { dataSource.linkOwner(created.id, it) }
+        val companyId = companySession.companyId ?: error("Company session not resolved")
+        val created = dataSource.insert(vehicle.toDto(companyId)).toDomain()
+        customerId?.let { dataSource.linkOwner(created.id, it, companyId) }
         created
     }
 
     override suspend fun updateVehicle(vehicle: Vehicle): Result<Unit> = runCatching {
-        dataSource.update(vehicle.id, vehicle.toDto())
+        dataSource.update(vehicle.id, vehicle.toDto(companySession.companyId))
     }
 
-    private fun Vehicle.toDto() = VehicleDto(
+    private fun Vehicle.toDto(companyId: String? = null) = VehicleDto(
         id = id.ifBlank { null },    // null → DB generates UUID on insert
         plate = plate,
         color = color,
@@ -49,6 +52,7 @@ class VehicleRepositoryImpl @Inject constructor(
         vehicleTypeId = vehicleTypeId,
         status = if (status == EntityStatus.Active) "active" else "inactive",
         createdAt = if (createdAt != null) createdAt.toString() else null,
-        updatedAt = if (updatedAt != null) updatedAt.toString() else null
+        updatedAt = if (updatedAt != null) updatedAt.toString() else null,
+        companyId = companyId
     )
 }

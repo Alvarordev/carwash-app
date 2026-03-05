@@ -12,9 +12,9 @@ data class OrderDto(
         @SerialName("customer_id") val customerId: String? = null,
         @SerialName("vehicle_id") val vehicleId: String? = null,
         @SerialName("cashier_id") val cashierId: String? = null,
-        val subtotal: Double = 0.0, // ← agrega = 0.0 como default
-        val discounts: Double = 0.0, // ← agrega = 0.0 como default
-        val total: Double = 0.0, // ← agrega = 0.0 como default
+        val subtotal: Double = 0.0,
+        val discounts: Double = 0.0,
+        val total: Double = 0.0,
         val status: String,
         @SerialName("payment_status") val paymentStatus: String? = null,
         @SerialName("payment_method") val paymentMethod: String? = null,
@@ -22,7 +22,8 @@ data class OrderDto(
         val notes: String? = null,
         val photos: List<String> = emptyList(),
         @SerialName("created_at") val createdAt: String,
-        @SerialName("updated_at") val updatedAt: String
+        @SerialName("updated_at") val updatedAt: String,
+        @SerialName("company_id") val companyId: String? = null
 )
 
 @Serializable
@@ -32,9 +33,9 @@ data class OrderWithDetailsDto(
         @SerialName("customer_id") val customerId: String? = null,
         @SerialName("vehicle_id") val vehicleId: String? = null,
         @SerialName("cashier_id") val cashierId: String? = null,
-        val subtotal: Double = 0.0, // ← agrega = 0.0 como default
-        val discounts: Double = 0.0, // ← agrega = 0.0 como default
-        val total: Double = 0.0, // ← agrega = 0.0 como default
+        val subtotal: Double = 0.0,
+        val discounts: Double = 0.0,
+        val total: Double = 0.0,
         val status: String,
         @SerialName("payment_status") val paymentStatus: String? = null,
         @SerialName("payment_method") val paymentMethod: String? = null,
@@ -43,6 +44,7 @@ data class OrderWithDetailsDto(
         val photos: List<String> = emptyList(),
         @SerialName("created_at") val createdAt: String,
         @SerialName("updated_at") val updatedAt: String,
+        @SerialName("company_id") val companyId: String? = null,
         // Relaciones embebidas (PostgREST join)
         val customers: CustomerDto? = null,
         val vehicles: VehicleDto? = null,
@@ -59,7 +61,8 @@ data class OrderItemDto(
         @SerialName("unit_price") val unitPrice: Double,
         val quantity: Int,
         val subtotal: Double,
-        @SerialName("created_at") val createdAt: String
+        @SerialName("created_at") val createdAt: String,
+        @SerialName("company_id") val companyId: String? = null
 )
 
 @Serializable
@@ -69,7 +72,8 @@ data class OrderStaffDto(
         @SerialName("staff_id") val staffId: String? = null,
         @SerialName("staff_name") val staffName: String,
         @SerialName("role_snapshot") val roleSnapshot: String? = null,
-        @SerialName("created_at") val createdAt: String
+        @SerialName("created_at") val createdAt: String,
+        @SerialName("company_id") val companyId: String? = null
 )
 
 @Serializable
@@ -94,13 +98,14 @@ data class OrderAttachmentDto(
 @Serializable
 data class CreateOrderDto(
         @SerialName("order_number") val orderNumber: String,
+        @SerialName("company_id") val companyId: String,
         @SerialName("customer_id") val customerId: String? = null,
         @SerialName("vehicle_id") val vehicleId: String? = null,
         @SerialName("cashier_id") val cashierId: String? = null,
         @EncodeDefault(EncodeDefault.Mode.ALWAYS) val subtotal: Double = 0.0,
         @EncodeDefault(EncodeDefault.Mode.ALWAYS) val discounts: Double = 0.0,
         @EncodeDefault(EncodeDefault.Mode.ALWAYS) val total: Double = 0.0,
-        @EncodeDefault(EncodeDefault.Mode.ALWAYS) val status: String = "Pendiente",
+        @EncodeDefault(EncodeDefault.Mode.ALWAYS) val status: String = "En Proceso",
         @EncodeDefault(EncodeDefault.Mode.ALWAYS)
         @SerialName("payment_status")
         val paymentStatus: String? = "pendiente",
@@ -120,6 +125,7 @@ data class UpdateOrderStatusDto(
 @Serializable
 data class CreateOrderItemDto(
         @SerialName("order_id") val orderId: String,
+        @SerialName("company_id") val companyId: String,
         @SerialName("service_id") val serviceId: String? = null,
         @SerialName("service_name") val serviceName: String,
         @SerialName("unit_price") val unitPrice: Double,
@@ -130,6 +136,7 @@ data class CreateOrderItemDto(
 @Serializable
 data class CreateOrderStaffDto(
         @SerialName("order_id") val orderId: String,
+        @SerialName("company_id") val companyId: String,
         @SerialName("staff_id") val staffId: String? = null,
         @SerialName("staff_name") val staffName: String,
         @SerialName("role_snapshot") val roleSnapshot: String? = null

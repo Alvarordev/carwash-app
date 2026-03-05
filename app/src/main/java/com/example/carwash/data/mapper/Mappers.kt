@@ -1,5 +1,6 @@
 package com.example.carwash.data.mapper
 
+import com.example.carwash.data.remote.dto.CompanyDto
 import com.example.carwash.data.remote.dto.CustomerDto
 import com.example.carwash.data.remote.dto.InventoryItemDto
 import com.example.carwash.data.remote.dto.OrderDto
@@ -65,11 +66,11 @@ private fun String.toPromotionScope(): PromotionScope = when (this) {
 }
 
 private fun String.toOrderStatus(): OrderStatus = when (this) {
-    "Pendiente" -> OrderStatus.Pendiente
     "En Proceso" -> OrderStatus.EnProceso
+    "Terminado" -> OrderStatus.Terminado
     "Cancelado" -> OrderStatus.Cancelado
     "Entregado" -> OrderStatus.Entregado
-    else -> OrderStatus.Pendiente
+    else -> OrderStatus.EnProceso
 }
 
 private fun String?.toPaymentStatus(): PaymentStatus? = when (this) {
@@ -78,6 +79,15 @@ private fun String?.toPaymentStatus(): PaymentStatus? = when (this) {
     "parcial" -> PaymentStatus.Parcial
     else -> null
 }
+
+fun CompanyDto.toDomain() = Company(
+    id = id,
+    name = name,
+    slug = slug,
+    status = status.toEntityStatus(),
+    createdAt = createdAt.toOffsetDateTime(),
+    updatedAt = updatedAt.toOffsetDateTime()
+)
 
 fun CustomerDto.toDomain() = Customer(
     id = id,
@@ -216,6 +226,7 @@ fun OrderDto.toDomain() = Order(
     paymentMethod = paymentMethod,
     cancelReason = cancelReason,
     notes = notes,
+    photos = photos,
     createdAt = createdAt.toOffsetDateTime(),
     updatedAt = updatedAt.toOffsetDateTime()
 )
@@ -234,6 +245,7 @@ fun OrderWithDetailsDto.toDomain() = Order(
     paymentMethod = paymentMethod,
     cancelReason = cancelReason,
     notes = notes,
+    photos = photos,
     createdAt = createdAt.toOffsetDateTime(),
     updatedAt = updatedAt.toOffsetDateTime(),
     customer = customers?.toDomain(),

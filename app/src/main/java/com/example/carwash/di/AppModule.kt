@@ -5,6 +5,7 @@ import android.content.Context
 import com.example.carwash.BuildConfig
 import com.example.carwash.data.remote.datasource.*
 import com.example.carwash.data.repository.*
+import com.example.carwash.data.session.CompanySession
 import com.example.carwash.domain.repository.*
 import dagger.Module
 import dagger.Provides
@@ -15,6 +16,7 @@ import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
+import io.github.jan.supabase.realtime.Realtime
 import io.github.jan.supabase.storage.Storage
 import javax.inject.Singleton
 
@@ -32,7 +34,12 @@ object AppModule {
                 install(Postgrest)
                 install(Storage)
                 install(Auth)
+                install(Realtime)
             }
+
+    @Provides
+    @Singleton
+    fun provideCompanyDataSource(client: SupabaseClient) = CompanyRemoteDataSource(client)
 
     @Provides
     @Singleton
@@ -78,23 +85,35 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideVehicleAnalysisDatasource(
+            client: SupabaseClient,
+            contentResolver: ContentResolver
+    ) = VehicleAnalysisDatasource(client, contentResolver)
+
+    @Provides
+    @Singleton
     fun provideOrderRepository(
             orderDataSource: OrderRemoteDataSource,
             staffDataSource: StaffRemoteDataSource,
             photoDataSource: PhotoRemoteDataSource,
-            contentResolver: ContentResolver
+            contentResolver: ContentResolver,
+            companySession: CompanySession
     ): OrderRepository =
-            OrderRepositoryImpl(orderDataSource, staffDataSource, photoDataSource, contentResolver)
+            OrderRepositoryImpl(orderDataSource, staffDataSource, photoDataSource, contentResolver, companySession)
 
     @Provides
     @Singleton
-    fun provideCustomerRepository(dataSource: CustomerRemoteDataSource): CustomerRepository =
-            CustomerRepositoryImpl(dataSource)
+    fun provideCustomerRepository(
+            dataSource: CustomerRemoteDataSource,
+            companySession: CompanySession
+    ): CustomerRepository = CustomerRepositoryImpl(dataSource, companySession)
 
     @Provides
     @Singleton
-    fun provideVehicleRepository(dataSource: VehicleRemoteDataSource): VehicleRepository =
-            VehicleRepositoryImpl(dataSource)
+    fun provideVehicleRepository(
+            dataSource: VehicleRemoteDataSource,
+            companySession: CompanySession
+    ): VehicleRepository = VehicleRepositoryImpl(dataSource, companySession)
 
     @Provides
     @Singleton
@@ -126,5 +145,9 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideAuthRepository(client: SupabaseClient): AuthRepository = AuthRepositoryImpl(client)
+    fun provideAuthRepository(
+            client: SupabaseClient,
+            companyDataSource: CompanyRemoteDataSource,
+            companySession: CompanySession
+    ): AuthRepository = AuthRepositoryImpl(client, companyDataSource, companySession)
 }

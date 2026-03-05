@@ -232,7 +232,10 @@ fun PhotoCaptureScreen(navController: NavController, viewModel: AddOrderViewMode
 
                 // Next button
                 Button(
-                        onClick = { navController.navigate(Screen.AddOrderVehicle.route) },
+                        onClick = {
+                            viewModel.analyzeVehicle()
+                            navController.navigate(Screen.AddOrderVehicle.route)
+                        },
                         enabled = uiState.photos.isNotEmpty()
                 ) {
                     Row(

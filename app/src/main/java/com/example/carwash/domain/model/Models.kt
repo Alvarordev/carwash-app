@@ -3,6 +3,15 @@ package com.example.carwash.domain.model
 import java.time.LocalDate
 import java.time.OffsetDateTime
 
+data class Company(
+    val id: String,
+    val name: String,
+    val slug: String,
+    val status: EntityStatus,
+    val createdAt: OffsetDateTime,
+    val updatedAt: OffsetDateTime
+)
+
 data class Customer(
     val id: String,
     val firstName: String,

@@ -242,7 +242,7 @@ private fun StatsCard(completedCount: Int, inProgressCount: Int, pendingCount: I
                         modifier = Modifier.weight(1f)
                 )
                 StatusChip(
-                        label = "En Espera",
+                        label = "Terminado",
                         count = pendingCount,
                         dotColor = StatusPending,
                         modifier = Modifier.weight(1f)

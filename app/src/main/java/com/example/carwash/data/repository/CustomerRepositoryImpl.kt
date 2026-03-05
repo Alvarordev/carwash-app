@@ -3,6 +3,7 @@ package com.example.carwash.data.repository
 import com.example.carwash.data.mapper.toDomain
 import com.example.carwash.data.remote.datasource.CustomerRemoteDataSource
 import com.example.carwash.data.remote.dto.CustomerDto
+import com.example.carwash.data.session.CompanySession
 import com.example.carwash.domain.model.Customer
 import com.example.carwash.domain.model.EntityStatus
 import com.example.carwash.domain.repository.CustomerRepository
@@ -12,7 +13,8 @@ import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
 class CustomerRepositoryImpl @Inject constructor(
-    private val dataSource: CustomerRemoteDataSource
+    private val dataSource: CustomerRemoteDataSource,
+    private val companySession: CompanySession
 ) : CustomerRepository {
 
     override fun getCustomers(): Flow<List<Customer>> = flow {
@@ -50,6 +52,7 @@ class CustomerRepositoryImpl @Inject constructor(
         email = email,
         status = if (status == EntityStatus.Active) "active" else "inactive",
         createdAt = createdAt.toString(),
-        updatedAt = updatedAt.toString()
+        updatedAt = updatedAt.toString(),
+        companyId = companySession.companyId
     )
 }

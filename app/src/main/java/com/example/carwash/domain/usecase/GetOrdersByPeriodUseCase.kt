@@ -1,13 +1,13 @@
 package com.example.carwash.domain.usecase
 
 import com.example.carwash.domain.model.Order
+import com.example.carwash.domain.model.OrderPeriod
 import com.example.carwash.domain.repository.OrderRepository
-import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
-class GetTodayOrdersUseCase @Inject constructor(
+class GetOrdersByPeriodUseCase @Inject constructor(
     private val repository: OrderRepository
 ) {
-    operator fun invoke(): Flow<Result<List<Order>>> =
-        repository.observeTodayOrders()
+    suspend operator fun invoke(period: OrderPeriod): Result<List<Order>> =
+        repository.getOrdersByPeriod(period)
 }

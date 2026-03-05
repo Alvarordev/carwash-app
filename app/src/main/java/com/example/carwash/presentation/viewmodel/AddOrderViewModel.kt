@@ -12,6 +12,7 @@ import com.example.carwash.domain.model.Service
 import com.example.carwash.domain.model.StaffMember
 import com.example.carwash.domain.model.Vehicle
 import com.example.carwash.domain.model.VehicleType
+import com.example.carwash.data.remote.datasource.VehicleAnalysisDatasource
 import com.example.carwash.domain.repository.VehicleRepository
 import com.example.carwash.domain.usecase.AddOrderUseCase
 import com.example.carwash.domain.usecase.GetPromotionsUseCase
@@ -51,6 +52,8 @@ data class AddOrderUiState(
         val availableStaff: List<StaffMember> = emptyList(),
         val availablePromotions: List<Promotion> = emptyList(),
         val isLoading: Boolean = true,
+        val isAnalyzingVehicle: Boolean = false,
+        val vehicleAnalyzed: Boolean = false,
         val isCreatingOrder: Boolean = false,
         val orderCreated: Boolean = false,
         val error: String? = null
@@ -73,6 +76,7 @@ constructor(
         private val getStaffUseCase: GetStaffUseCase,
         private val getServicePricingUseCase: GetServicePricingUseCase,
         private val vehicleRepository: VehicleRepository,
+        private val vehicleAnalysisDataSource: VehicleAnalysisDatasource,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AddOrderUiState())
@@ -285,6 +289,33 @@ constructor(
     }
 
     fun resetOrderCreated() = _uiState.update { it.copy(orderCreated = false) }
+
+    // ────────────────────────── Vehicle Analysis ────────────────────────────
+    fun analyzeVehicle() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isAnalyzingVehicle = true) }
+            vehicleAnalysisDataSource.analyze(_uiState.value.photos)
+                    .onSuccess { result ->
+                        println(result)
+
+                        _uiState.update { state ->
+                            state.copy(
+                                    isAnalyzingVehicle = false,
+                                    vehicleAnalyzed = true,
+                                    plate = if (!result.plate.isNullOrBlank()) result.plate else state.plate,
+                                    brand = if (!result.brand.isNullOrBlank()) result.brand else state.brand,
+                                    model = if (!result.model.isNullOrBlank()) result.model else state.model,
+                                    color = if (!result.color.isNullOrBlank()) result.color else state.color,
+                            )
+                        }
+                    }
+                    .onFailure {
+                        _uiState.update { it.copy(isAnalyzingVehicle = false) }
+                    }
+        }
+    }
+
+    fun onVehicleAnalyzedShown() = _uiState.update { it.copy(vehicleAnalyzed = false) }
 
     companion object {
         private const val TAG = "AddOrderViewModel"
