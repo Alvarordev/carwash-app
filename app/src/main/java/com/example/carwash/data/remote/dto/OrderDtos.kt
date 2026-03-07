@@ -62,7 +62,8 @@ data class OrderItemDto(
         val quantity: Int,
         val subtotal: Double,
         @SerialName("created_at") val createdAt: String,
-        @SerialName("company_id") val companyId: String? = null
+        @SerialName("company_id") val companyId: String? = null,
+        val services: ServiceRefDto? = null
 )
 
 @Serializable

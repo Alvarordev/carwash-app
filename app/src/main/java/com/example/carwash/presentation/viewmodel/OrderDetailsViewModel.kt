@@ -5,12 +5,16 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.carwash.data.remote.dto.OrderStatus as DtoOrderStatus
 import com.example.carwash.domain.model.Order
+import com.example.carwash.domain.model.OrderItem
+import com.example.carwash.domain.model.OrderItemRequest
 import com.example.carwash.domain.model.OrderStaff
 import com.example.carwash.domain.model.OrderStatus
+import com.example.carwash.domain.model.Service
 import com.example.carwash.domain.model.StaffMember
 import com.example.carwash.domain.repository.OrderRepository
 import com.example.carwash.domain.repository.StaffRepository
 import com.example.carwash.domain.usecase.GetOrderByIdUseCase
+import com.example.carwash.domain.usecase.GetServicesUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.OffsetDateTime
 import javax.inject.Inject
@@ -18,14 +22,19 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class OrderDetailsUiState(
     val order: Order? = null,
     val availableStaff: List<StaffMember> = emptyList(),
+    val availableServices: List<Service> = emptyList(),
     val selectedStatus: OrderStatus? = null,
     val pendingStaff: List<OrderStaff> = emptyList(),
+    val pendingItems: List<OrderItem> = emptyList(),
     val isLoading: Boolean = true,
     val isSaving: Boolean = false,
     val errorMessage: String? = null,
@@ -37,7 +46,8 @@ class OrderDetailsViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val getOrderById: GetOrderByIdUseCase,
     private val orderRepository: OrderRepository,
-    private val staffRepository: StaffRepository
+    private val staffRepository: StaffRepository,
+    private val getServicesUseCase: GetServicesUseCase
 ) : ViewModel() {
 
     private val orderId: String = checkNotNull(savedStateHandle["orderId"])
@@ -47,6 +57,10 @@ class OrderDetailsViewModel @Inject constructor(
 
     init {
         load()
+        getServicesUseCase()
+            .onEach { services -> _uiState.update { it.copy(availableServices = services) } }
+            .catch { }
+            .launchIn(viewModelScope)
     }
 
     fun load() {
@@ -66,6 +80,7 @@ class OrderDetailsViewModel @Inject constructor(
                     order = order,
                     availableStaff = staff,
                     pendingStaff = order?.staff ?: emptyList(),
+                    pendingItems = order?.items ?: emptyList(),
                     selectedStatus = null,
                     isLoading = false,
                     errorMessage = orderResult.exceptionOrNull()?.message
@@ -74,20 +89,25 @@ class OrderDetailsViewModel @Inject constructor(
         }
     }
 
+    // ── Status ───────────────────────────────────────────────────────────────
+
     fun selectStatus(status: OrderStatus) {
         val order = _uiState.value.order ?: return
         val nextValid = nextValidStatus(order.status) ?: return
         if (status != nextValid) return
-        // Toggle: clicking the already-selected next status deselects it
         val newValue = if (_uiState.value.selectedStatus == status) null else status
         _uiState.update { it.copy(selectedStatus = newValue) }
     }
+
+    fun undoStatus() = _uiState.update { it.copy(selectedStatus = null) }
 
     fun nextValidStatus(current: OrderStatus): OrderStatus? = when (current) {
         OrderStatus.EnProceso -> OrderStatus.Terminado
         OrderStatus.Terminado -> OrderStatus.Entregado
         else -> null
     }
+
+    // ── Staff ────────────────────────────────────────────────────────────────
 
     fun addStaff(member: StaffMember) {
         val current = _uiState.value.pendingStaff
@@ -109,6 +129,34 @@ class OrderDetailsViewModel @Inject constructor(
         }
     }
 
+    // ── Services ─────────────────────────────────────────────────────────────
+
+    /** Replace pending items with the given service list, preserving existing items' data. */
+    fun setServices(services: List<Service>) {
+        val current = _uiState.value.pendingItems
+        val kept = current.filter { item -> services.any { it.id == item.serviceId } }
+        val keptIds = kept.mapNotNull { it.serviceId }.toSet()
+        val added = services
+            .filter { it.id !in keptIds }
+            .map { service ->
+                OrderItem(
+                    id = "pending-${service.id}",
+                    orderId = orderId,
+                    serviceId = service.id,
+                    serviceName = service.name,
+                    unitPrice = 0.0,
+                    quantity = 1,
+                    subtotal = 0.0,
+                    createdAt = OffsetDateTime.now(),
+                    serviceColor = service.color,
+                    serviceIcon = service.icon
+                )
+            }
+        _uiState.update { it.copy(pendingItems = kept + added) }
+    }
+
+    // ── Save ─────────────────────────────────────────────────────────────────
+
     fun saveChanges() {
         val state = _uiState.value
         val order = state.order ?: return
@@ -116,6 +164,7 @@ class OrderDetailsViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
+                // Status
                 val newStatus = state.selectedStatus
                 if (newStatus != null && newStatus != order.status) {
                     val dtoStatus = when (newStatus) {
@@ -127,17 +176,37 @@ class OrderDetailsViewModel @Inject constructor(
                     orderRepository.updateOrderStatus(orderId, dtoStatus).getOrThrow()
                 }
 
+                // Staff
                 val originalStaffIds = order.staff.mapNotNull { it.staffId }.toSet()
                 val pendingStaffIds = state.pendingStaff.mapNotNull { it.staffId }.toSet()
-                val toAdd = state.pendingStaff
+                val staffToAdd = state.pendingStaff
                     .filter { it.staffId != null && it.staffId !in originalStaffIds }
                     .mapNotNull { it.staffId }
-                val toRemove = order.staff
+                val staffToRemove = order.staff
                     .filter { it.staffId != null && it.staffId !in pendingStaffIds }
                     .map { it.id }
+                if (staffToAdd.isNotEmpty() || staffToRemove.isNotEmpty()) {
+                    orderRepository.updateOrderStaff(orderId, staffToAdd, staffToRemove).getOrThrow()
+                }
 
-                if (toAdd.isNotEmpty() || toRemove.isNotEmpty()) {
-                    orderRepository.updateOrderStaff(orderId, toAdd, toRemove).getOrThrow()
+                // Items
+                val originalItemIds = order.items.map { it.id }.toSet()
+                val pendingItemIds = state.pendingItems.map { it.id }.toSet()
+                val itemsToRemove = order.items
+                    .filter { it.id !in pendingItemIds }
+                    .map { it.id }
+                val itemsToAdd = state.pendingItems
+                    .filter { it.id.startsWith("pending-") }
+                    .map { item ->
+                        OrderItemRequest(
+                            serviceId = item.serviceId,
+                            serviceName = item.serviceName,
+                            unitPrice = item.unitPrice,
+                            quantity = item.quantity
+                        )
+                    }
+                if (itemsToAdd.isNotEmpty() || itemsToRemove.isNotEmpty()) {
+                    orderRepository.updateOrderItems(orderId, itemsToAdd, itemsToRemove).getOrThrow()
                 }
 
                 getOrderById(orderId)
@@ -146,6 +215,7 @@ class OrderDetailsViewModel @Inject constructor(
                             it.copy(
                                 order = refreshed,
                                 pendingStaff = refreshed.staff,
+                                pendingItems = refreshed.items,
                                 selectedStatus = null,
                                 isSaving = false,
                                 saveSuccess = true

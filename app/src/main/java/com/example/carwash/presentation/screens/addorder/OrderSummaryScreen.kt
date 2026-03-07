@@ -1,9 +1,8 @@
 package com.example.carwash.presentation.screens.addorder
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,26 +11,28 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Notes
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -39,223 +40,295 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import com.example.carwash.domain.model.Service
+import com.example.carwash.presentation.components.serviceIconDrawable
 import com.example.carwash.presentation.viewmodel.AddOrderViewModel
+import com.example.carwash.ui.theme.BackgroundDark
+import com.example.carwash.ui.theme.OnSurfaceVariantDark
+import com.example.carwash.ui.theme.OrangePrimary
+import com.example.carwash.ui.theme.SurfaceCardDark
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun OrderSummaryScreen(
-        navController: NavController,
-        viewModel: AddOrderViewModel,
-        onOrderCreated: () -> Unit = {}
+    navController: NavController,
+    viewModel: AddOrderViewModel,
+    onOrderCreated: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
     LaunchedEffect(uiState.orderCreated) {
         if (uiState.orderCreated) {
-            onOrderCreated() // ← navega fuera del grafo
+            onOrderCreated()
         }
     }
 
-    Scaffold(
-            topBar = {
-                TopAppBar(
-                        title = { Text("Resumen de la Orden") },
-                        navigationIcon = {
-                            IconButton(onClick = { navController.popBackStack() }) {
-                                Icon(
-                                        Icons.AutoMirrored.Filled.ArrowBack,
-                                        contentDescription = "Atrás"
-                                )
-                            }
-                        }
+    Scaffold(containerColor = BackgroundDark) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            // ── Top bar ──────────────────────────────────────────────────
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = { navController.popBackStack() }) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Atrás", tint = Color.White)
+                }
+                Text(
+                    text = "Resumen de la Orden",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp
                 )
             }
-    ) { paddingValues ->
-        LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(paddingValues),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            item {
-                SummaryCard(title = "Fotos (${uiState.photos.size})") {
-                    LazyRow(
-                            contentPadding = PaddingValues(top = 8.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        itemsIndexed(uiState.photos) { index, uri ->
-                            Box {
-                                AsyncImage(
-                                        model = uri,
-                                        contentDescription = "Foto ${index + 1}",
-                                        contentScale = ContentScale.Crop,
-                                        modifier =
-                                                Modifier.size(90.dp).clip(RoundedCornerShape(8.dp))
-                                )
-                            }
+
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp)
+            ) {
+                // ── Vehículo ─────────────────────────────────────────────
+                item {
+                    SummarySectionHeader(icon = Icons.Default.DirectionsCar, title = "VEHÍCULO")
+                }
+                item {
+                    val rows = buildList {
+                        add("Placa" to uiState.plate.ifBlank { "-" })
+                        add("Marca" to uiState.brand.ifBlank { "-" })
+                        uiState.model.takeIf { it.isNotBlank() }?.let { add("Modelo" to it) }
+                        add("Color" to uiState.color.ifBlank { "-" })
+                        uiState.vehicleType?.let { add("Tipo" to it.name) }
+                    }
+                    SummaryDetailCard(rows = rows)
+                }
+
+                // ── Cliente ───────────────────────────────────────────────
+                item {
+                    SummarySectionHeader(icon = Icons.Default.Person, title = "CLIENTE")
+                }
+                item {
+                    val customerRows = when {
+                        uiState.customerSkipped -> listOf("Cliente" to "Sin cliente")
+                        uiState.selectedCustomer != null -> buildList {
+                            add("Nombre" to uiState.selectedCustomer!!.fullName)
+                            uiState.selectedCustomer!!.phone?.let { add("Teléfono" to it) }
                         }
-                    }
-                }
-            }
-
-            // ---- Vehicle ----
-            item {
-                SummaryCard(title = "Vehículo") {
-                    Column(
-                            verticalArrangement = Arrangement.spacedBy(4.dp),
-                            modifier = Modifier.padding(top = 8.dp)
-                    ) {
-                        SummaryRow(label = "Placa", value = uiState.plate.ifBlank { "-" })
-                        SummaryRow(label = "Marca", value = uiState.brand.ifBlank { "-" })
-                        SummaryRow(label = "Modelo", value = uiState.model.ifBlank { "-" })
-                        SummaryRow(label = "Color", value = uiState.color.ifBlank { "-" })
-                        SummaryRow(label = "Tipo", value = uiState.vehicleType?.name ?: "-")
-                    }
-                }
-            }
-
-            // ---- Services ----
-            item {
-                SummaryCard(title = "Servicios (${uiState.selectedServices.size})") {
-                    Column(
-                            verticalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier.padding(top = 8.dp)
-                    ) {
-                        if (uiState.selectedServices.isEmpty()) {
-                            Text(
-                                    "Ningún servicio seleccionado",
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        } else {
-                            uiState.selectedServices.forEach { service ->
-                                val price = uiState.resolvedPrices[service.id] ?: 0.0
-                                Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text(service.name, style = MaterialTheme.typography.bodyMedium)
-                                    Text(
-                                            "S/ %.2f".format(price),
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.primary
-                                    )
-                                }
+                        uiState.customerFirstName.isNotBlank() -> buildList {
+                            val name = buildString {
+                                append(uiState.customerFirstName.trim())
+                                if (uiState.customerLastName.isNotBlank()) append(" ${uiState.customerLastName.trim()}")
                             }
-                            HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp))
-                            Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text("Total", style = MaterialTheme.typography.titleSmall)
-                                Text(
-                                        "S/ %.2f".format(uiState.total),
-                                        style = MaterialTheme.typography.titleSmall,
-                                        color = MaterialTheme.colorScheme.primary
-                                )
-                            }
+                            add("Nombre" to name)
+                            if (uiState.customerPhone.isNotBlank()) add("Teléfono" to uiState.customerPhone)
                         }
+                        else -> listOf("Cliente" to "Sin cliente")
                     }
+                    SummaryDetailCard(rows = customerRows)
                 }
-            }
 
-            // ---- Staff ----
-            item {
-                SummaryCard(title = "Staff Asignado") {
-                    Row(
-                            verticalAlignment = Alignment.CenterVertically,
+                // ── Fotos ─────────────────────────────────────────────────
+                if (uiState.photos.isNotEmpty()) {
+                    item {
+                        SummarySectionHeader(icon = Icons.Default.Image, title = "FOTOS (${uiState.photos.size})")
+                    }
+                    item {
+                        LazyRow(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.padding(top = 8.dp)
-                    ) {
-                        Icon(
-                                Icons.Default.Person,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                                uiState.selectedStaff?.fullName ?: "Sin asignar",
-                                style = MaterialTheme.typography.bodyLarge
-                        )
+                            contentPadding = PaddingValues(bottom = 4.dp)
+                        ) {
+                            itemsIndexed(uiState.photos) { index, uri ->
+                                AsyncImage(
+                                    model = uri,
+                                    contentDescription = "Foto ${index + 1}",
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier
+                                        .size(100.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                )
+                            }
+                        }
                     }
                 }
-            }
 
-            // ---- Observations ----
-            item {
-                SummaryCard(title = "Observaciones") {
-                    Text(
-                            uiState.observations.ifBlank { "Sin observaciones." },
-                            style = MaterialTheme.typography.bodyMedium,
-                            color =
-                                    if (uiState.observations.isBlank())
-                                            MaterialTheme.colorScheme.onSurfaceVariant
-                                    else MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.padding(top = 8.dp)
+                // ── Servicios ─────────────────────────────────────────────
+                item {
+                    SummarySectionHeader(icon = Icons.Default.Build, title = "SERVICIOS")
+                }
+                if (uiState.selectedServices.isEmpty()) {
+                    item {
+                        Text(
+                            "Sin servicios seleccionados",
+                            color = OnSurfaceVariantDark,
+                            fontSize = 13.sp,
+                            modifier = Modifier.padding(vertical = 4.dp)
+                        )
+                    }
+                } else {
+                    items(uiState.selectedServices) { service ->
+                        SummaryServiceRow(
+                            service = service,
+                            price = uiState.resolvedPrices[service.id] ?: 0.0
+                        )
+                        Spacer(Modifier.height(6.dp))
+                    }
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 4.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Total", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                            Text(
+                                "S/ ${"%.2f".format(uiState.total)}",
+                                color = OrangePrimary,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp
+                            )
+                        }
+                    }
+                }
+
+                // ── Personal ──────────────────────────────────────────────
+                item {
+                    SummarySectionHeader(icon = Icons.Default.Group, title = "PERSONAL ASIGNADO")
+                }
+                item {
+                    val staffName = uiState.selectedStaff?.fullName ?: "Sin asignar"
+                    val staffRole = uiState.selectedStaff?.role?.name
+                    SummaryDetailCard(
+                        rows = buildList {
+                            add("Nombre" to staffName)
+                            staffRole?.let { add("Rol" to it) }
+                        }
                     )
                 }
-            }
 
-            item { Spacer(modifier = Modifier.height(8.dp)) }
-
-            // ---- Create Order Button ----
-            item {
-                Button(
-                        onClick = { viewModel.createOrder() },
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = !uiState.isCreatingOrder
-                ) {
-                    if (uiState.isCreatingOrder) {
-                        CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                color = MaterialTheme.colorScheme.onPrimary,
-                                strokeWidth = 2.dp
-                        )
-                    } else {
-                        Icon(Icons.Default.Check, contentDescription = null)
-                        Text("  Crear Orden")
+                // ── Observaciones ─────────────────────────────────────────
+                if (uiState.observations.isNotBlank()) {
+                    item {
+                        SummarySectionHeader(icon = Icons.Default.Notes, title = "OBSERVACIONES")
+                    }
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(SurfaceCardDark)
+                                .padding(horizontal = 16.dp, vertical = 14.dp)
+                        ) {
+                            Text(uiState.observations, color = Color.White, fontSize = 14.sp)
+                        }
                     }
                 }
 
+                // ── Error ─────────────────────────────────────────────────
                 uiState.error?.let { error ->
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(error, color = MaterialTheme.colorScheme.error)
+                    item {
+                        Spacer(Modifier.height(8.dp))
+                        Text(error, color = Color(0xFFFF6B6B), fontSize = 13.sp, modifier = Modifier.padding(horizontal = 4.dp))
+                    }
                 }
+
+                item { Spacer(Modifier.height(24.dp)) }
+            }
+
+            // ── CTA ───────────────────────────────────────────────────────
+            Column(modifier = Modifier.padding(horizontal = 20.dp)) {
+                Button(
+                    onClick = { viewModel.createOrder() },
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    enabled = !uiState.isCreatingOrder,
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary)
+                ) {
+                    if (uiState.isCreatingOrder) {
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                    } else {
+                        Text("Crear Orden", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
             }
         }
     }
 }
 
 @Composable
-private fun SummaryCard(title: String, content: @Composable () -> Unit) {
-    Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors =
-                    CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
-                    ),
-            shape = RoundedCornerShape(12.dp)
+private fun SummarySectionHeader(icon: ImageVector, title: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 20.dp, bottom = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Icon(imageVector = icon, contentDescription = null, tint = OnSurfaceVariantDark, modifier = Modifier.size(14.dp))
+        Spacer(Modifier.width(6.dp))
+        Text(title, color = OnSurfaceVariantDark, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.8.sp)
+    }
+}
+
+@Composable
+private fun SummaryDetailCard(rows: List<Pair<String, String>>) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(SurfaceCardDark)
+    ) {
+        rows.forEachIndexed { index, (key, value) ->
             Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) { Text(title, style = MaterialTheme.typography.titleSmall) }
-            content()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(key, color = OnSurfaceVariantDark, fontSize = 14.sp)
+                Text(value, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.End)
+            }
+            if (index < rows.size - 1) {
+                HorizontalDivider(color = Color.White.copy(alpha = 0.06f), thickness = 0.5.dp)
+            }
         }
     }
 }
 
 @Composable
-private fun SummaryRow(label: String, value: String) {
-    Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-        Text(
-                label,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(value, style = MaterialTheme.typography.bodyMedium)
+private fun SummaryServiceRow(service: Service, price: Double) {
+    val iconRes = serviceIconDrawable(service.icon)
+    val serviceColor = service.color?.let { hex ->
+        runCatching { Color(android.graphics.Color.parseColor(hex)) }.getOrNull()
+    } ?: OnSurfaceVariantDark
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(SurfaceCardDark)
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (iconRes != null) {
+            Icon(painter = painterResource(id = iconRes), contentDescription = null, tint = serviceColor, modifier = Modifier.size(16.dp))
+        } else {
+            Icon(imageVector = Icons.Default.Build, contentDescription = null, tint = OnSurfaceVariantDark, modifier = Modifier.size(16.dp))
+        }
+        Spacer(Modifier.width(12.dp))
+        Text(service.name, color = serviceColor, fontSize = 14.sp, modifier = Modifier.weight(1f))
+        Text("S/ ${"%.2f".format(price)}", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
     }
-    HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
 }

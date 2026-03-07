@@ -1,5 +1,10 @@
 package com.example.carwash.presentation.navigation
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
@@ -43,13 +48,16 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector?
     // Add Order Wizard Steps
     object AddOrderPhoto : Screen("add_order_photo", "Fotos")
     object AddOrderVehicle : Screen("add_order_vehicle", "Vehículo")
+    object AddOrderCustomer : Screen("add_order_customer", "Cliente")
     object AddOrderServices : Screen("add_order_services", "Servicios")
     object AddOrderObservations : Screen("add_order_observations", "Observaciones")
     object AddOrderSummary : Screen("add_order_summary", "Resumen")
 
-    // Order Detail
     object OrderDetail : Screen("order_details/{orderId}", "Orden")
 }
+
+private val tabRoutes = listOf(Screen.Dashboard.route, Screen.Orders.route, Screen.Profile.route)
+private const val TAB_ANIM_DURATION = 300
 
 @Composable
 fun MainScreen(onAddOrder: () -> Unit) {
@@ -95,11 +103,55 @@ fun MainScreen(onAddOrder: () -> Unit) {
             }
     ) { paddingValues ->
         NavHost(
-                navController = navController,
-                startDestination = Screen.Dashboard.route,
-                modifier = Modifier.padding(paddingValues)
+            navController = navController,
+            startDestination = Screen.Dashboard.route,
+            modifier = Modifier.padding(paddingValues),
+            enterTransition = {
+                val targetIndex = tabRoutes.indexOf(targetState.destination.route)
+                val initialIndex = tabRoutes.indexOf(initialState.destination.route)
+                when {
+                    targetIndex < 0 || initialIndex < 0 ->
+                        slideInHorizontally(tween(TAB_ANIM_DURATION)) { it } + fadeIn(tween(TAB_ANIM_DURATION))
+                    targetIndex > initialIndex ->
+                        slideInHorizontally(tween(TAB_ANIM_DURATION)) { it }
+                    else ->
+                        slideInHorizontally(tween(TAB_ANIM_DURATION)) { -it }
+                }
+            },
+            exitTransition = {
+                val targetIndex = tabRoutes.indexOf(targetState.destination.route)
+                val initialIndex = tabRoutes.indexOf(initialState.destination.route)
+                when {
+                    targetIndex < 0 || initialIndex < 0 ->
+                        slideOutHorizontally(tween(TAB_ANIM_DURATION)) { -it } + fadeOut(tween(TAB_ANIM_DURATION))
+                    targetIndex > initialIndex ->
+                        slideOutHorizontally(tween(TAB_ANIM_DURATION)) { -it }
+                    else ->
+                        slideOutHorizontally(tween(TAB_ANIM_DURATION)) { it }
+                }
+            },
+            popEnterTransition = {
+                slideInHorizontally(tween(TAB_ANIM_DURATION)) { -it } + fadeIn(tween(TAB_ANIM_DURATION))
+            },
+            popExitTransition = {
+                slideOutHorizontally(tween(TAB_ANIM_DURATION)) { it } + fadeOut(tween(TAB_ANIM_DURATION))
+            }
         ) {
-            composable(Screen.Dashboard.route) { DashboardScreen(onAddOrder = onAddOrder) }
+            composable(Screen.Dashboard.route) {
+                DashboardScreen(
+                    onAddOrder = onAddOrder,
+                    onOrderClick = { orderId -> navController.navigate("order_details/$orderId") },
+                    onViewAll = {
+                        navController.navigate(Screen.Orders.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
+                )
+            }
             composable(Screen.Orders.route) {
                 OrdersScreen(
                     onAddOrder = onAddOrder,

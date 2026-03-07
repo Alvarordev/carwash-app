@@ -55,7 +55,13 @@ class CustomerRemoteDataSource @Inject constructor(
             .decodeList<CustomerDto>()
             .firstOrNull()
 
-    suspend fun insert(dto: CustomerDto): CustomerDto =
+    suspend fun searchByPhone(phone: String): CustomerDto? =
+        client.postgrest["customers"]
+            .select { filter { eq("phone", phone) } }
+            .decodeList<CustomerDto>()
+            .firstOrNull()
+
+    suspend fun insert(dto: CustomerInsertDto): CustomerDto =
         client.postgrest["customers"]
             .insert(dto) { select() }
             .decodeSingle()

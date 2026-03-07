@@ -10,7 +10,9 @@ data class OrderItem(
         val unitPrice: Double,
         val quantity: Int,
         val subtotal: Double,
-        val createdAt: OffsetDateTime
+        val createdAt: OffsetDateTime,
+        val serviceColor: String? = null,
+        val serviceIcon: String? = null
 )
 
 data class OrderStaff(

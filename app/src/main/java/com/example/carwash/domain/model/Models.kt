@@ -74,7 +74,9 @@ data class Service(
     val category: ServiceCategory,
     val status: EntityStatus,
     val createdAt: OffsetDateTime,
-    val updatedAt: OffsetDateTime
+    val updatedAt: OffsetDateTime,
+    val color: String? = null,
+    val icon: String? = null
 )
 
 data class ServicePricing(

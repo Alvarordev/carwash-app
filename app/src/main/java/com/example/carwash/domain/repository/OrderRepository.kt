@@ -4,6 +4,7 @@ import com.example.carwash.data.remote.dto.OrderStatus
 import com.example.carwash.data.remote.dto.PaymentStatus
 import com.example.carwash.domain.model.CreateOrderRequest
 import com.example.carwash.domain.model.Order
+import com.example.carwash.domain.model.OrderItemRequest
 import com.example.carwash.domain.model.OrderPeriod
 import com.example.carwash.domain.model.OrderStatusHistory
 import kotlinx.coroutines.flow.Flow
@@ -25,6 +26,12 @@ interface OrderRepository {
     suspend fun updateOrderStaff(
         orderId: String,
         toAdd: List<String>,
+        toRemove: List<String>
+    ): Result<Unit>
+
+    suspend fun updateOrderItems(
+        orderId: String,
+        toAdd: List<OrderItemRequest>,
         toRemove: List<String>
     ): Result<Unit>
 }

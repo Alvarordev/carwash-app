@@ -144,7 +144,9 @@ fun ServiceDto.toDomain() = Service(
     category = category.toServiceCategory(),
     status = status.toEntityStatus(),
     createdAt = createdAt.toOffsetDateTime(),
-    updatedAt = updatedAt.toOffsetDateTime()
+    updatedAt = updatedAt.toOffsetDateTime(),
+    color = color,
+    icon = icon
 )
 
 fun ServicePricingDto.toDomain() = ServicePricing(
@@ -191,7 +193,9 @@ fun OrderItemDto.toDomain() = OrderItem(
     unitPrice = unitPrice,
     quantity = quantity,
     subtotal = subtotal,
-    createdAt = createdAt.toOffsetDateTime()
+    createdAt = createdAt.toOffsetDateTime(),
+    serviceColor = services?.color,
+    serviceIcon = services?.icon
 )
 
 fun OrderStaffDto.toDomain() = OrderStaff(

@@ -15,6 +15,7 @@ import com.example.carwash.data.remote.dto.UpdateOrderStatusDto
 import com.example.carwash.data.session.CompanySession
 import com.example.carwash.domain.model.CreateOrderRequest
 import com.example.carwash.domain.model.Order
+import com.example.carwash.domain.model.OrderItemRequest
 import com.example.carwash.domain.model.OrderPeriod
 import com.example.carwash.domain.model.OrderStatusHistory
 import com.example.carwash.domain.repository.OrderRepository
@@ -252,6 +253,31 @@ constructor(
             }
         }
         if (staffDtos.isNotEmpty()) orderDataSource.assignStaffBatch(staffDtos)
+    }
+
+    override suspend fun updateOrderItems(
+        orderId: String,
+        toAdd: List<OrderItemRequest>,
+        toRemove: List<String>
+    ): Result<Unit> = runCatching {
+        val companyId = companySession.companyId ?: error("Company session not resolved")
+        toRemove.forEach { itemId -> orderDataSource.deleteOrderItem(itemId) }
+        if (toAdd.isNotEmpty()) {
+            orderDataSource.addOrderItems(toAdd.map { item ->
+                CreateOrderItemDto(
+                    orderId = orderId,
+                    companyId = companyId,
+                    serviceId = item.serviceId,
+                    serviceName = item.serviceName,
+                    unitPrice = item.unitPrice,
+                    quantity = item.quantity,
+                    subtotal = item.subtotal
+                )
+            })
+        }
+        val allItems = orderDataSource.getOrderItems(orderId)
+        val newSubtotal = allItems.sumOf { it.subtotal }
+        orderDataSource.updateTotals(orderId, newSubtotal, 0.0, newSubtotal)
     }
 
     override fun observeOrdersByPeriod(period: OrderPeriod): Flow<Result<List<Order>>> {

@@ -8,6 +8,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
+import com.example.carwash.presentation.screens.addorder.CustomerScreen
 import com.example.carwash.presentation.screens.addorder.ObservationsScreen
 import com.example.carwash.presentation.screens.addorder.OrderSummaryScreen
 import com.example.carwash.presentation.screens.addorder.PhotoCaptureScreen
@@ -91,6 +92,13 @@ fun NavGraphBuilder.addOrderGraph(
         }
         val viewModel: AddOrderViewModel = hiltViewModel(parentEntry)
         VehicleFormScreen(navController = navController, viewModel = viewModel)
+    }
+    composable(Screen.AddOrderCustomer.route) {
+        val parentEntry = remember(it) {
+            navController.getBackStackEntry(ADD_ORDER_GRAPH_ROUTE)
+        }
+        val viewModel: AddOrderViewModel = hiltViewModel(parentEntry)
+        CustomerScreen(navController = navController, viewModel = viewModel)
     }
     composable(Screen.AddOrderServices.route) {
         val parentEntry = remember(it) {

@@ -36,7 +36,7 @@ class OrderRemoteDataSource @Inject constructor(
                 *,
                 customers(*),
                 vehicles(*),
-                order_items(*),
+                order_items(*, services(color, icon)),
                 order_staff(*)
                 """.trimIndent()
                 )
@@ -58,7 +58,7 @@ class OrderRemoteDataSource @Inject constructor(
                     *,
                     customers(*),
                     vehicles(*),
-                    order_items(*),
+                    order_items(*, services(color, icon)),
                     order_staff(*)
                     """.trimIndent()
                 )
@@ -108,7 +108,7 @@ class OrderRemoteDataSource @Inject constructor(
                     *,
                     customers(*),
                     vehicles(*),
-                    order_items(*),
+                    order_items(*, services(color, icon)),
                     order_staff(*)
                     """.trimIndent()
                 )
@@ -133,7 +133,7 @@ class OrderRemoteDataSource @Inject constructor(
                     *,
                     customers(id, first_name, last_name, phone),
                     vehicles(id, plate, brand, color),
-                    order_items(*),
+                    order_items(*, services(color, icon)),
                     order_staff(*)
                     """.trimIndent()
                 )

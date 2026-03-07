@@ -22,9 +22,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.carwash.R
 import com.example.carwash.domain.model.Order
 import com.example.carwash.domain.model.OrderStatus
 import com.example.carwash.domain.model.ServiceCategory
@@ -39,10 +41,10 @@ import com.example.carwash.ui.theme.StatusPending
 import com.example.carwash.ui.theme.SurfaceCardDark
 import java.time.OffsetDateTime
 import java.time.temporal.ChronoUnit
+import androidx.core.graphics.toColorInt
 
 @Composable
 fun ActiveOrderCard(order: Order, modifier: Modifier = Modifier) {
-    // Pick the first service name to display as the primary service chip
     val primaryItem = order.items.firstOrNull()
     val serviceName = primaryItem?.serviceName ?: "Servicio"
     val serviceCategory =
@@ -106,7 +108,6 @@ fun ActiveOrderCard(order: Order, modifier: Modifier = Modifier) {
                 )
             }
 
-            // Service chip + status badge
             Column(horizontalAlignment = Alignment.End) {
                 Box(
                         modifier =
@@ -139,7 +140,6 @@ fun ActiveOrderCard(order: Order, modifier: Modifier = Modifier) {
     }
 }
 
-// Keep backward-compatible minimal OrderCard for any other usages
 @Composable
 fun OrderCard(order: Order, modifier: Modifier = Modifier) {
     ActiveOrderCard(order = order, modifier = modifier)
@@ -149,8 +149,14 @@ fun OrderCard(order: Order, modifier: Modifier = Modifier) {
 fun OrderListCard(order: Order, modifier: Modifier = Modifier) {
     val vehicleDisplayName = order.vehicle?.let { v -> "${v.brand} ${v.model ?: ""}".trim() } ?: "Vehículo"
     val plate = order.vehicle?.plate ?: order.orderNumber
-    val serviceName = order.items.firstOrNull()?.serviceName ?: "Servicio"
+    val firstItem = order.items.firstOrNull()
+    val serviceName = firstItem?.serviceName ?: "Servicio"
     val timeAgoText = timeAgo(order.createdAt.toString())
+
+    val serviceColor = firstItem?.serviceColor?.let { hex ->
+        runCatching { Color(hex.toColorInt()) }.getOrNull()
+    } ?: OnSurfaceVariantDark
+    val serviceIconRes = serviceIconDrawable(firstItem?.serviceIcon)
 
     val (statusLabel, statusColor) = when (order.status) {
         OrderStatus.EnProceso  -> "EN PROCESO" to StatusInProgress
@@ -199,16 +205,25 @@ fun OrderListCard(order: Order, modifier: Modifier = Modifier) {
 
             // Bottom row: service icon + name + status pill
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.DirectionsCar,
-                    contentDescription = null,
-                    tint = OnSurfaceVariantDark,
-                    modifier = Modifier.size(16.dp)
-                )
+                if (serviceIconRes != null) {
+                    Icon(
+                        painter = painterResource(id = serviceIconRes),
+                        contentDescription = null,
+                        tint = serviceColor,
+                        modifier = Modifier.size(16.dp)
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.DirectionsCar,
+                        contentDescription = null,
+                        tint = serviceColor,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
                 Spacer(Modifier.width(6.dp))
                 Text(
                     text = serviceName,
-                    color = Color.White,
+                    color = serviceColor,
                     fontSize = 13.sp,
                     modifier = Modifier.weight(1f)
                 )
@@ -238,6 +253,23 @@ fun OrderListCard(order: Order, modifier: Modifier = Modifier) {
             }
         }
     }
+}
+
+fun serviceIconDrawable(icon: String?): Int? = when (icon) {
+    "car"         -> R.drawable.car
+    "droplet"     -> R.drawable.droplet
+    "star"        -> R.drawable.star
+    "soap"        -> R.drawable.soap
+    "leaf"        -> R.drawable.leaf
+    "flash"       -> R.drawable.flash
+    "sun"         -> R.drawable.sun_light
+    "wind"        -> R.drawable.wind
+    "wrench"      -> R.drawable.wrench
+    "tools"       -> R.drawable.tools
+    "shield"      -> R.drawable.shield
+    "flame"       -> R.drawable.fire_flame
+    "bright-star" -> R.drawable.bright_star
+    else          -> null
 }
 
 private fun timeAgo(createdAt: String?): String {

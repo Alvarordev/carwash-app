@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.carwash.domain.model.CreateOrderRequest
+import com.example.carwash.domain.model.Customer
 import com.example.carwash.domain.model.EntityStatus
 import com.example.carwash.domain.model.OrderItemRequest
 import com.example.carwash.domain.model.Promotion
@@ -13,6 +14,7 @@ import com.example.carwash.domain.model.StaffMember
 import com.example.carwash.domain.model.Vehicle
 import com.example.carwash.domain.model.VehicleType
 import com.example.carwash.data.remote.datasource.VehicleAnalysisDatasource
+import com.example.carwash.domain.repository.CustomerRepository
 import com.example.carwash.domain.repository.VehicleRepository
 import com.example.carwash.domain.usecase.AddOrderUseCase
 import com.example.carwash.domain.usecase.GetPromotionsUseCase
@@ -20,6 +22,8 @@ import com.example.carwash.domain.usecase.GetServicePricingUseCase
 import com.example.carwash.domain.usecase.GetServicesUseCase
 import com.example.carwash.domain.usecase.GetStaffUseCase
 import com.example.carwash.domain.usecase.GetVehicleTypesUseCase
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.OffsetDateTime
 import javax.inject.Inject
@@ -56,7 +60,15 @@ data class AddOrderUiState(
         val vehicleAnalyzed: Boolean = false,
         val isCreatingOrder: Boolean = false,
         val orderCreated: Boolean = false,
-        val error: String? = null
+        val error: String? = null,
+        // Customer step
+        val customerPhone: String = "",
+        val customerFirstName: String = "",
+        val customerLastName: String = "",
+        val foundCustomer: Customer? = null,
+        val isSearchingCustomer: Boolean = false,
+        val selectedCustomer: Customer? = null,   // existing customer confirmed by user
+        val customerSkipped: Boolean = false
 ) {
     /** Subtotal computed from resolved prices, falling back to 0 if not found. */
     val subtotal: Double
@@ -77,7 +89,10 @@ constructor(
         private val getServicePricingUseCase: GetServicePricingUseCase,
         private val vehicleRepository: VehicleRepository,
         private val vehicleAnalysisDataSource: VehicleAnalysisDatasource,
+        private val customerRepository: CustomerRepository,
 ) : ViewModel() {
+
+    private var customerSearchJob: Job? = null
 
     private val _uiState = MutableStateFlow(AddOrderUiState())
     val uiState: StateFlow<AddOrderUiState> = _uiState.asStateFlow()
@@ -189,6 +204,61 @@ constructor(
     fun onPromotionSelected(promotion: Promotion) =
             _uiState.update { it.copy(selectedPromotion = promotion) }
 
+    // ────────────────────────── Customer ────────────────────────────────────
+    fun onCustomerPhoneChanged(phone: String) {
+        _uiState.update {
+            it.copy(
+                customerPhone = phone,
+                foundCustomer = null,
+                selectedCustomer = null,
+                customerSkipped = false,
+                customerFirstName = "",
+                customerLastName = "",
+                isSearchingCustomer = false
+            )
+        }
+        customerSearchJob?.cancel()
+        if (phone.length >= 7) {
+            customerSearchJob = viewModelScope.launch {
+                delay(500)
+                _uiState.update { it.copy(isSearchingCustomer = true) }
+                val found = customerRepository.searchCustomerByPhone(phone).getOrNull()
+                _uiState.update {
+                    it.copy(
+                        foundCustomer = found,
+                        isSearchingCustomer = false,
+                        customerFirstName = found?.firstName ?: "",
+                        customerLastName = found?.lastName ?: ""
+                    )
+                }
+            }
+        }
+    }
+
+    fun onCustomerFirstNameChanged(name: String) =
+            _uiState.update { it.copy(customerFirstName = name) }
+
+    fun onCustomerLastNameChanged(name: String) =
+            _uiState.update { it.copy(customerLastName = name) }
+
+    fun confirmFoundCustomer() =
+            _uiState.update { it.copy(selectedCustomer = it.foundCustomer) }
+
+    fun onCustomerSkipped() {
+        customerSearchJob?.cancel()
+        _uiState.update {
+            it.copy(
+                customerPhone = "",
+                customerFirstName = "",
+                customerLastName = "",
+                foundCustomer = null,
+                isSearchingCustomer = false,
+                selectedCustomer = null,
+                customerSkipped = true
+            )
+        }
+    }
+
     // ────────────────────────── Create Order ────────────────────────────────
     fun createOrder() {
         viewModelScope.launch {
@@ -212,6 +282,8 @@ constructor(
                 }
                 return@launch
             }
+
+            val customerId = resolveCustomer(state, vehicleId)
 
             val vehicleTypeId = state.vehicleType?.id
             val orderItems =
@@ -237,7 +309,7 @@ constructor(
                     CreateOrderRequest(
                             vehicleId = vehicleId,
                             cashierId = CASHIER_ID,
-                            customerId = null,
+                            customerId = customerId,
                             items = orderItems,
                             staffIds = staffIds,
                             notes = state.observations.ifBlank { null },
@@ -288,16 +360,43 @@ constructor(
                 ?.id
     }
 
+    private suspend fun resolveCustomer(state: AddOrderUiState, vehicleId: String): String? {
+        if (state.customerSkipped) return null
+
+        val customerId: String? = when {
+            state.selectedCustomer != null -> state.selectedCustomer.id
+            state.customerPhone.isNotBlank() && state.customerFirstName.isNotBlank() -> {
+                val newCustomer = Customer(
+                    id = "",
+                    firstName = state.customerFirstName.trim(),
+                    lastName = state.customerLastName.trim(),
+                    phone = state.customerPhone.trim(),
+                    status = EntityStatus.Active,
+                    createdAt = java.time.OffsetDateTime.now(),
+                    updatedAt = java.time.OffsetDateTime.now()
+                )
+                customerRepository.addCustomer(newCustomer)
+                    .onFailure { Log.e(TAG, "Error creating customer", it) }
+                    .getOrNull()?.id
+            }
+            else -> null
+        }
+
+        if (customerId != null) {
+            vehicleRepository.linkOwnerToVehicle(vehicleId, customerId)
+                .onFailure { Log.e(TAG, "Error linking customer to vehicle", it) }
+        }
+
+        return customerId
+    }
+
     fun resetOrderCreated() = _uiState.update { it.copy(orderCreated = false) }
 
-    // ────────────────────────── Vehicle Analysis ────────────────────────────
     fun analyzeVehicle() {
         viewModelScope.launch {
             _uiState.update { it.copy(isAnalyzingVehicle = true) }
             vehicleAnalysisDataSource.analyze(_uiState.value.photos)
                     .onSuccess { result ->
-                        println(result)
-
                         _uiState.update { state ->
                             state.copy(
                                     isAnalyzingVehicle = false,

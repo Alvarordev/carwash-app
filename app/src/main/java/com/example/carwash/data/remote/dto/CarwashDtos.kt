@@ -41,6 +41,18 @@ data class CustomerDto(
     @SerialName("company_id") val companyId: String? = null
 )
 
+@Serializable
+data class CustomerInsertDto(
+    @SerialName("first_name") val firstName: String,
+    @SerialName("last_name") val lastName: String,
+    val phone: String? = null,
+    @SerialName("doc_type") val docType: String? = null,
+    @SerialName("doc_number") val docNumber: String? = null,
+    val email: String? = null,
+    val status: String = "active",
+    @SerialName("company_id") val companyId: String
+)
+
 
 @Serializable
 data class StaffMemberDto(
@@ -67,7 +79,15 @@ data class ServiceDto(
     val status: String,
     @SerialName("created_at") val createdAt: String,
     @SerialName("updated_at") val updatedAt: String,
-    @SerialName("company_id") val companyId: String? = null
+    @SerialName("company_id") val companyId: String? = null,
+    val color: String? = null,
+    val icon: String? = null
+)
+
+@Serializable
+data class ServiceRefDto(
+    val color: String? = null,
+    val icon: String? = null
 )
 
 @Serializable

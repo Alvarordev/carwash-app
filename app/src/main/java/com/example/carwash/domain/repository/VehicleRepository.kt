@@ -10,4 +10,5 @@ interface VehicleRepository {
     suspend fun getVehiclesByCustomer(customerId: String): Result<List<Vehicle>>
     suspend fun addVehicle(vehicle: Vehicle, customerId: String? = null): Result<Vehicle>
     suspend fun updateVehicle(vehicle: Vehicle): Result<Unit>
+    suspend fun linkOwnerToVehicle(vehicleId: String, customerId: String): Result<Unit>
 }

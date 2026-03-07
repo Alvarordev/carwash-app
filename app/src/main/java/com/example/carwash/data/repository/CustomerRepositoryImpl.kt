@@ -2,7 +2,7 @@ package com.example.carwash.data.repository
 
 import com.example.carwash.data.mapper.toDomain
 import com.example.carwash.data.remote.datasource.CustomerRemoteDataSource
-import com.example.carwash.data.remote.dto.CustomerDto
+import com.example.carwash.data.remote.dto.CustomerInsertDto
 import com.example.carwash.data.session.CompanySession
 import com.example.carwash.domain.model.Customer
 import com.example.carwash.domain.model.EntityStatus
@@ -29,30 +29,44 @@ class CustomerRepositoryImpl @Inject constructor(
         dataSource.searchByName(query).map { it.toDomain() }
     }
 
+    override suspend fun searchCustomerByPhone(phone: String): Result<Customer?> = runCatching {
+        dataSource.searchByPhone(phone)?.toDomain()
+    }
+
     override suspend fun addCustomer(customer: Customer): Result<Customer> = runCatching {
-        dataSource.insert(customer.toDto()).toDomain()
+        val companyId = companySession.companyId ?: error("Company session not resolved")
+        dataSource.insert(customer.toInsertDto(companyId)).toDomain()
     }
 
     override suspend fun updateCustomer(customer: Customer): Result<Unit> = runCatching {
-        dataSource.update(customer.id, customer.toDto())
+        // update uses a full DTO — keep existing pattern but only for updates
+        dataSource.update(customer.id, com.example.carwash.data.remote.dto.CustomerDto(
+            id = customer.id,
+            firstName = customer.firstName,
+            lastName = customer.lastName,
+            docType = customer.docType?.name?.lowercase(),
+            docNumber = customer.docNumber,
+            phone = customer.phone,
+            email = customer.email,
+            status = if (customer.status == EntityStatus.Active) "active" else "inactive",
+            createdAt = customer.createdAt.toString(),
+            updatedAt = customer.updatedAt.toString(),
+            companyId = companySession.companyId
+        ))
     }
 
     override suspend fun setCustomerStatus(id: String, status: EntityStatus): Result<Unit> = runCatching {
         dataSource.setStatus(id, if (status == EntityStatus.Active) "active" else "inactive")
     }
 
-    // Domain → DTO para escritura
-    private fun Customer.toDto() = CustomerDto(
-        id = id,
+    private fun Customer.toInsertDto(companyId: String) = CustomerInsertDto(
         firstName = firstName,
         lastName = lastName,
+        phone = phone,
         docType = docType?.name?.lowercase(),
         docNumber = docNumber,
-        phone = phone,
         email = email,
         status = if (status == EntityStatus.Active) "active" else "inactive",
-        createdAt = createdAt.toString(),
-        updatedAt = updatedAt.toString(),
-        companyId = companySession.companyId
+        companyId = companyId
     )
 }

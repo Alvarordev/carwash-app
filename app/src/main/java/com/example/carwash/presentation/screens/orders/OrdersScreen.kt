@@ -73,13 +73,12 @@ fun OrdersScreen(
         ) {
             Spacer(Modifier.height(24.dp))
 
-            // Header row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "All Orders",
+                    text = "Órdenes",
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
                     fontSize = 22.sp,
@@ -103,7 +102,6 @@ fun OrdersScreen(
 
             Spacer(Modifier.height(20.dp))
 
-            // Period filter pills
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 PeriodPill(
                     label = "Hoy",
@@ -124,7 +122,6 @@ fun OrdersScreen(
 
             Spacer(Modifier.height(20.dp))
 
-            // Content
             when {
                 uiState.isLoading -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

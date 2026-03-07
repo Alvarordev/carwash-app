@@ -18,6 +18,7 @@ import io.ktor.http.HttpHeaders
 import javax.inject.Inject
 import kotlinx.serialization.json.Json
 import io.ktor.client.engine.okhttp.OkHttp
+import kotlin.getValue
 
 private val json = Json { ignoreUnknownKeys = true }
 
@@ -34,15 +35,15 @@ class VehicleAnalysisDatasource @Inject constructor(
         val response = httpClient.post("http://178.156.230.233/analyze-vehicle") {
             header(HttpHeaders.Authorization, "Bearer $accessToken")
             setBody(MultiPartFormDataContent(formData {
-                photos.forEachIndexed { index, uri ->
+                photos.firstOrNull()?.let { uri ->
                     val bytes = contentResolver.openInputStream(uri)?.use { it.readBytes() }
-                        ?: return@forEachIndexed
+                        ?: return@let
                     append(
                         key = "image",
                         value = bytes,
                         headers = Headers.build {
                             append(HttpHeaders.ContentType, "image/jpeg")
-                            append(HttpHeaders.ContentDisposition, "form-data; name=\"image\"; filename=\"photo_$index.jpg\"")
+                            append(HttpHeaders.ContentDisposition, "form-data; name=\"image\"; filename=\"photo_0.jpg\"")
                         }
                     )
                 }

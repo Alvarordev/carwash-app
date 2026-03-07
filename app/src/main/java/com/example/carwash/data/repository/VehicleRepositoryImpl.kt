@@ -43,6 +43,17 @@ class VehicleRepositoryImpl @Inject constructor(
         dataSource.update(vehicle.id, vehicle.toDto(companySession.companyId))
     }
 
+    override suspend fun linkOwnerToVehicle(vehicleId: String, customerId: String): Result<Unit> = runCatching {
+        val companyId = companySession.companyId ?: error("Company session not resolved")
+        try {
+            dataSource.linkOwner(vehicleId, customerId, companyId)
+        } catch (e: Exception) {
+            // Ignore duplicate owner links (composite PK conflict)
+            if (e.message?.contains("duplicate") == true || e.message?.contains("23505") == true) Unit
+            else throw e
+        }
+    }
+
     private fun Vehicle.toDto(companyId: String? = null) = VehicleDto(
         id = id.ifBlank { null },    // null → DB generates UUID on insert
         plate = plate,
