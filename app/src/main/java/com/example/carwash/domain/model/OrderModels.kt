@@ -60,7 +60,8 @@ data class Order(
         val customer: Customer? = null,
         val vehicle: Vehicle? = null,
         val items: List<OrderItem> = emptyList(),
-        val staff: List<OrderStaff> = emptyList()
+        val staff: List<OrderStaff> = emptyList(),
+        val statusHistory: List<OrderStatusHistory> = emptyList()
 ) {
     val isPending: Boolean
         get() = status == OrderStatus.EnProceso
@@ -69,7 +70,7 @@ data class Order(
     val isCompleted: Boolean
         get() = status == OrderStatus.Entregado
     val isCancelled: Boolean
-        get() = status == OrderStatus.Cancelado
+        get() = status == OrderStatus.Anulado
     val isPaid: Boolean
         get() = paymentStatus == PaymentStatus.Pagado
     val canChangeStatus: Boolean

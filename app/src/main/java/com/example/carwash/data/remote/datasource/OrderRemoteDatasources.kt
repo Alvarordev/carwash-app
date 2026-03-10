@@ -109,7 +109,8 @@ class OrderRemoteDataSource @Inject constructor(
                     customers(*),
                     vehicles(*),
                     order_items(*, services(color, icon)),
-                    order_staff(*)
+                    order_staff(*),
+                    order_status_history(*)
                     """.trimIndent()
                 )
             ) {
@@ -141,6 +142,7 @@ class OrderRemoteDataSource @Inject constructor(
                 filter {
                     or {
                         eq("status", "En Proceso")
+                        eq("status", "Lavando")
                         eq("status", "Terminado")
                     }
                 }
@@ -207,6 +209,11 @@ class OrderRemoteDataSource @Inject constructor(
                     "total" to total
                 )
             ) { filter { eq("id", id) } }
+    }
+
+    suspend fun updatePhotos(orderId: String, photos: List<String>) {
+        client.postgrest["orders"]
+            .update(mapOf("photos" to photos)) { filter { eq("id", orderId) } }
     }
 
     suspend fun updatePayment(

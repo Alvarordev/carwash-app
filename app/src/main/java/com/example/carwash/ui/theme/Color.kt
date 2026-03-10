@@ -19,9 +19,10 @@ val OnSurfaceDark = Color(0xFFDDDDDD)
 val OnSurfaceVariantDark = Color(0xFF9E9E9E)
 
 // Status colors
-val StatusInProgress = Color(0xFF3B82F6)
+val StatusInProgress = Color(0xFFFFC107)
+val StatusWashing = Color(0xFF297BF6)
 val StatusPending = Color(0xFF8557f3)
-val StatusDone = Color(0xFF2bf575)
+val StatusDone = Color(0xFF10CB58)
 val StatusCancelled = Color(0xFFEF5350)
 
 // Service chip colors

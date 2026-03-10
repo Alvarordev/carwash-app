@@ -72,6 +72,10 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun providePaymentMethodDataSource(client: SupabaseClient) = PaymentMethodRemoteDataSource(client)
+
+    @Provides
+    @Singleton
     fun providePromotionDataSource(client: SupabaseClient) = PromotionRemoteDataSource(client)
 
     @Provides
@@ -96,10 +100,11 @@ object AppModule {
             orderDataSource: OrderRemoteDataSource,
             staffDataSource: StaffRemoteDataSource,
             photoDataSource: PhotoRemoteDataSource,
+            paymentMethodDataSource: PaymentMethodRemoteDataSource,
             contentResolver: ContentResolver,
             companySession: CompanySession
     ): OrderRepository =
-            OrderRepositoryImpl(orderDataSource, staffDataSource, photoDataSource, contentResolver, companySession)
+            OrderRepositoryImpl(orderDataSource, staffDataSource, photoDataSource, paymentMethodDataSource, contentResolver, companySession)
 
     @Provides
     @Singleton

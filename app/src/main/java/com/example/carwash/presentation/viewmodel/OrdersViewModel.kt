@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.carwash.domain.model.Order
 import com.example.carwash.domain.model.OrderPeriod
+import com.example.carwash.domain.model.OrderStatus
 import com.example.carwash.domain.repository.OrderRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -40,7 +41,7 @@ class OrdersViewModel @Inject constructor(
                 .collect { result ->
                     result
                         .onSuccess { orders ->
-                            _uiState.update { it.copy(orders = orders, isLoading = false, errorMessage = null) }
+                            _uiState.update { it.copy(orders = orders.filter { o -> o.status != OrderStatus.Anulado }, isLoading = false, errorMessage = null) }
                         }
                         .onFailure { err ->
                             _uiState.update { it.copy(isLoading = false, errorMessage = err.message ?: "Error") }

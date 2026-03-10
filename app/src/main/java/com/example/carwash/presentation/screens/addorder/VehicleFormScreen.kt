@@ -129,7 +129,6 @@ fun VehicleFormScreen(navController: NavController, viewModel: AddOrderViewModel
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // ── Top bar ────────────────────────────────────────────────────
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -147,7 +146,6 @@ fun VehicleFormScreen(navController: NavController, viewModel: AddOrderViewModel
                 )
             }
 
-            // ── Body ───────────────────────────────────────────────────────
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -190,6 +188,7 @@ fun VehicleFormScreen(navController: NavController, viewModel: AddOrderViewModel
                     label = { Text("Marca *") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
                     colors = fieldColors
                 )
                 OutlinedTextField(
@@ -198,6 +197,7 @@ fun VehicleFormScreen(navController: NavController, viewModel: AddOrderViewModel
                     label = { Text("Modelo") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
                     colors = fieldColors
                 )
                 OutlinedTextField(
@@ -206,10 +206,10 @@ fun VehicleFormScreen(navController: NavController, viewModel: AddOrderViewModel
                     label = { Text("Color *") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
                     colors = fieldColors
                 )
 
-                // Vehicle type selector
                 OutlinedTextField(
                     value = uiState.vehicleType?.name ?: "",
                     onValueChange = {},

@@ -12,7 +12,7 @@ enum class DiscountType { Percentage, Fixed }
 
 enum class PromotionScope { All, Service, VehicleType }
 
-enum class OrderStatus { EnProceso, Terminado, Cancelado, Entregado }
+enum class OrderStatus { EnProceso, Lavando, Terminado, Entregado, Anulado }
 
 enum class PaymentStatus { Pendiente, Pagado, Parcial }
 

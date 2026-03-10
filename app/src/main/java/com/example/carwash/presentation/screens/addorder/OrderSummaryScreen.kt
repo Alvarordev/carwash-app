@@ -100,7 +100,6 @@ fun OrderSummaryScreen(
                 modifier = Modifier.weight(1f),
                 contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp)
             ) {
-                // ── Vehículo ─────────────────────────────────────────────
                 item {
                     SummarySectionHeader(icon = Icons.Default.DirectionsCar, title = "VEHÍCULO")
                 }
@@ -115,7 +114,6 @@ fun OrderSummaryScreen(
                     SummaryDetailCard(rows = rows)
                 }
 
-                // ── Cliente ───────────────────────────────────────────────
                 item {
                     SummarySectionHeader(icon = Icons.Default.Person, title = "CLIENTE")
                 }

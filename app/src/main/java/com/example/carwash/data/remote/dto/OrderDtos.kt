@@ -49,7 +49,8 @@ data class OrderWithDetailsDto(
         val customers: CustomerDto? = null,
         val vehicles: VehicleDto? = null,
         @SerialName("order_items") val orderItems: List<OrderItemDto> = emptyList(),
-        @SerialName("order_staff") val orderStaff: List<OrderStaffDto> = emptyList()
+        @SerialName("order_staff") val orderStaff: List<OrderStaffDto> = emptyList(),
+        @SerialName("order_status_history") val orderStatusHistory: List<OrderStatusHistoryDto> = emptyList()
 )
 
 @Serializable

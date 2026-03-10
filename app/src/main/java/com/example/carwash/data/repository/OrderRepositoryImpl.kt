@@ -1,9 +1,11 @@
 package com.example.carwash.data.repository
 
 import android.content.ContentResolver
+import android.net.Uri
 import android.util.Log
 import com.example.carwash.data.mapper.toDomain
 import com.example.carwash.data.remote.datasource.OrderRemoteDataSource
+import com.example.carwash.data.remote.datasource.PaymentMethodRemoteDataSource
 import com.example.carwash.data.remote.datasource.PhotoRemoteDataSource
 import com.example.carwash.data.remote.datasource.StaffRemoteDataSource
 import com.example.carwash.data.remote.dto.CreateOrderDto
@@ -18,6 +20,7 @@ import com.example.carwash.domain.model.Order
 import com.example.carwash.domain.model.OrderItemRequest
 import com.example.carwash.domain.model.OrderPeriod
 import com.example.carwash.domain.model.OrderStatusHistory
+import com.example.carwash.domain.model.PaymentMethod
 import com.example.carwash.domain.repository.OrderRepository
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -34,6 +37,7 @@ constructor(
         private val orderDataSource: OrderRemoteDataSource,
         private val staffDataSource: StaffRemoteDataSource,
         private val photoDataSource: PhotoRemoteDataSource,
+        private val paymentMethodDataSource: PaymentMethodRemoteDataSource,
         private val contentResolver: ContentResolver,
         private val companySession: CompanySession
 ) : OrderRepository {
@@ -59,9 +63,10 @@ constructor(
         val statusStr =
                 when (status) {
                     OrderStatus.En_Proceso -> "En Proceso"
+                    OrderStatus.Lavando -> "Lavando"
                     OrderStatus.Terminado -> "Terminado"
-                    OrderStatus.Cancelado -> "Cancelado"
                     OrderStatus.Entregado -> "Entregado"
+                    OrderStatus.Anulado -> "Anulado"
                 }
         orderDataSource.getByStatus(statusStr).map { it.toDomain() }
     }
@@ -174,9 +179,10 @@ constructor(
         val statusStr =
                 when (status) {
                     OrderStatus.En_Proceso -> "En Proceso"
+                    OrderStatus.Lavando -> "Lavando"
                     OrderStatus.Terminado -> "Terminado"
-                    OrderStatus.Cancelado -> "Cancelado"
                     OrderStatus.Entregado -> "Entregado"
+                    OrderStatus.Anulado -> "Anulado"
                 }
         orderDataSource.updateStatus(orderId, UpdateOrderStatusDto(status = statusStr))
         orderDataSource.addStatusHistory(
@@ -196,11 +202,11 @@ constructor(
         val companyId = companySession.companyId ?: error("Company session not resolved")
         orderDataSource.updateStatus(
                 orderId,
-                UpdateOrderStatusDto(status = "Cancelado", cancelReason = reason)
+                UpdateOrderStatusDto(status = "Anulado", cancelReason = reason)
         )
         orderDataSource.addStatusHistory(
                 orderId = orderId,
-                status = "Cancelado",
+                status = "Anulado",
                 companyId = companyId,
                 changedBy = changedBy,
                 note = reason
@@ -304,6 +310,57 @@ constructor(
             OrderPeriod.ThisMonth -> today.withDayOfMonth(1).atStartOfDay(zoneId).toOffsetDateTime().toString()
         }
         orderDataSource.getAllForPeriod(startIso, endIso).map { it.toDomain() }
+    }
+
+    override suspend fun getPaymentMethods(): Result<List<PaymentMethod>> = runCatching {
+        paymentMethodDataSource.getActive().map { it.toDomain() }
+    }
+
+    override suspend fun deliverOrder(
+        orderId: String,
+        paymentMethod: String,
+        newPhotoUris: List<Uri>
+    ): Result<Unit> = runCatching {
+        val companyId = companySession.companyId ?: error("Company session not resolved")
+
+        // 1. Upload new photos if any
+        if (newPhotoUris.isNotEmpty()) {
+            val order = orderDataSource.getByIdWithDetails(orderId).toDomain()
+            val byteArrays = newPhotoUris.mapNotNull { uri ->
+                runCatching { contentResolver.openInputStream(uri)?.use { it.readBytes() } }.getOrNull()
+            }
+            val newUrls = if (byteArrays.isNotEmpty()) {
+                try {
+                    photoDataSource.uploadPhotos(order.orderNumber, byteArrays)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error uploading delivery photos", e)
+                    emptyList()
+                }
+            } else emptyList()
+
+            if (newUrls.isNotEmpty()) {
+                val merged = order.photos + newUrls
+                orderDataSource.updatePhotos(orderId, merged)
+            }
+        }
+
+        // 2. Update status to Entregado + payment info
+        orderDataSource.updateStatus(
+            orderId,
+            UpdateOrderStatusDto(
+                status = "Entregado",
+                paymentStatus = "pagado",
+                paymentMethod = paymentMethod
+            )
+        )
+
+        // 3. Add status history entry
+        orderDataSource.addStatusHistory(
+            orderId = orderId,
+            status = "Entregado",
+            companyId = companyId,
+            note = "Entrega confirmada · Pago: $paymentMethod"
+        )
     }
 
     private fun generateOrderNumber(): String =

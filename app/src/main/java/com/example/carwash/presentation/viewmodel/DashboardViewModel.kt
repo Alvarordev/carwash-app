@@ -25,6 +25,8 @@ data class DashboardUiState(
         get() = deliveredOrders.size
     val inProgressCount: Int
         get() = pendingInProgressOrders.count { it.status == OrderStatus.EnProceso }
+    val washingCount: Int
+        get() = pendingInProgressOrders.count { it.status == OrderStatus.Lavando }
     val pendingCount: Int
         get() = pendingInProgressOrders.count { it.status == OrderStatus.Terminado }
     val totalTodayCount: Int
@@ -47,7 +49,7 @@ constructor(private val getTodayOrdersUseCase: GetTodayOrdersUseCase) : ViewMode
                         _uiState.update {
                             it.copy(
                                 pendingInProgressOrders = orders.filter { o ->
-                                    o.status == OrderStatus.EnProceso || o.status == OrderStatus.Terminado
+                                    o.status == OrderStatus.EnProceso || o.status == OrderStatus.Lavando || o.status == OrderStatus.Terminado
                                 },
                                 deliveredOrders = orders.filter { o ->
                                     o.status == OrderStatus.Entregado

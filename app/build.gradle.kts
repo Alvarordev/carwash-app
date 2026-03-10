@@ -20,8 +20,17 @@ android {
     }
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = rootDir.resolve(localProperties.getProperty("KEYSTORE_PATH", ""))
+            storePassword = localProperties.getProperty("KEYSTORE_PASSWORD")
+            keyAlias = localProperties.getProperty("KEY_ALIAS")
+            keyPassword = localProperties.getProperty("KEY_PASSWORD")
+        }
+    }
+
     defaultConfig {
-        applicationId = "com.example.carwash"
+        applicationId = "com.carwash.manager"
         minSdk = 28
         targetSdk = 36
         versionCode = 1
@@ -36,6 +45,7 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

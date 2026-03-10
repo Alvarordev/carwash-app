@@ -38,10 +38,27 @@ class AuthViewModel @Inject constructor(
             try {
                 authRepository.signIn(email, password)
             } catch (e: Exception) {
-                _error.value = e.localizedMessage ?: "Fallo al iniciar sesión"
+                _error.value = mapAuthError(e)
             } finally {
                 _isLoading.value = false
             }
+        }
+    }
+
+    private fun mapAuthError(e: Exception): String {
+        val msg = e.message.orEmpty().lowercase()
+        return when {
+            "invalid login credentials" in msg || "invalid_grant" in msg ->
+                "Correo o contraseña incorrectos"
+            "email not confirmed" in msg ->
+                "Tu correo aún no ha sido confirmado"
+            "user not found" in msg ->
+                "No se encontró una cuenta con ese correo"
+            "too many requests" in msg || "rate limit" in msg ->
+                "Demasiados intentos. Espera un momento e intenta de nuevo"
+            "network" in msg || "unable to resolve host" in msg || "timeout" in msg ->
+                "Sin conexión a internet. Verifica tu red"
+            else -> "Error al iniciar sesión. Intenta de nuevo"
         }
     }
 

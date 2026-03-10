@@ -1,6 +1,9 @@
 package com.example.carwash.presentation.screens.orders
 
+import android.net.Uri
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
@@ -8,6 +11,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -32,6 +36,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
@@ -40,17 +45,21 @@ import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -77,11 +86,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.carwash.domain.model.OrderItem
 import com.example.carwash.domain.model.OrderStaff
 import com.example.carwash.domain.model.OrderStatus
+import com.example.carwash.domain.model.OrderStatusHistory
+import com.example.carwash.domain.model.PaymentMethod
+import java.io.File
+import java.time.OffsetDateTime
+import java.time.format.DateTimeFormatter
 import com.example.carwash.domain.model.Service
 import com.example.carwash.domain.model.StaffMember
 import com.example.carwash.domain.model.StaffRole
@@ -108,7 +123,7 @@ fun OrderDetailsScreen(
     var showServicesPicker by remember { mutableStateOf(false) }
     var selectedPhotoUrl by remember { mutableStateOf<String?>(null) }
 
-    val isLocked = uiState.order?.status == OrderStatus.Entregado
+    val isLocked = uiState.order?.status == OrderStatus.Entregado || uiState.order?.status == OrderStatus.Anulado
 
     LaunchedEffect(uiState.saveSuccess) {
         if (uiState.saveSuccess) {
@@ -283,16 +298,17 @@ fun OrderDetailsScreen(
                             }
                         }
 
-                        if (!isLocked) {
-                            item { SectionHeader(icon = Icons.Default.CheckCircle, title = "ACTUALIZAR ESTADO") }
-                            item {
-                                StatusSection(
-                                    currentStatus = order.status,
-                                    pendingStatus = uiState.selectedStatus,
-                                    onMarkNext = { viewModel.selectStatus(it) },
-                                    onUndo = { viewModel.undoStatus() }
-                                )
-                            }
+                        item { SectionHeader(icon = Icons.Default.CheckCircle, title = "ESTADO") }
+                        item {
+                            StatusTimeline(
+                                currentStatus = order.status,
+                                statusHistory = order.statusHistory,
+                                orderCreatedAt = order.createdAt,
+                                pendingStatus = uiState.selectedStatus,
+                                isLocked = isLocked,
+                                onMarkNext = { viewModel.selectStatus(it) },
+                                onUndo = { viewModel.undoStatus() }
+                            )
                         }
 
                         uiState.errorMessage?.let { err ->
@@ -424,6 +440,184 @@ fun OrderDetailsScreen(
                     }
                 }
             }
+        }
+    }
+
+    if (uiState.showDeliverySheet) {
+        DeliveryBottomSheet(
+            paymentMethods = uiState.paymentMethods,
+            isDelivering = uiState.isDelivering,
+            onDismiss = { viewModel.dismissDeliverySheet() },
+            onConfirm = { method, photos -> viewModel.confirmDelivery(method, photos) }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DeliveryBottomSheet(
+    paymentMethods: List<PaymentMethod>,
+    isDelivering: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: (paymentMethod: String, photoUris: List<Uri>) -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var selectedMethod by remember { mutableStateOf<String?>(null) }
+    var photoUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
+    val context = LocalContext.current
+
+    // Camera launcher
+    var cameraUri by remember { mutableStateOf<Uri?>(null) }
+    val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
+        if (success && cameraUri != null && photoUris.size < 4) {
+            photoUris = photoUris + cameraUri!!
+        }
+    }
+
+    // Gallery launcher
+    val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null && photoUris.size < 4) {
+            photoUris = photoUris + uri
+        }
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = SurfaceDark
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 20.dp)) {
+            Text(
+                "Confirmar Entrega",
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp,
+                modifier = Modifier.padding(bottom = 20.dp)
+            )
+
+            // Payment method section
+            Text(
+                "Método de pago",
+                color = OnSurfaceVariantDark,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 0.8.sp,
+                modifier = Modifier.padding(bottom = 10.dp)
+            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
+            ) {
+                paymentMethods.forEach { method ->
+                    FilterChip(
+                        selected = selectedMethod == method.name,
+                        onClick = { selectedMethod = method.name },
+                        label = { Text(method.name) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = OrangePrimary,
+                            selectedLabelColor = Color.White,
+                            containerColor = SurfaceCardDark,
+                            labelColor = OnSurfaceVariantDark
+                        ),
+                        border = FilterChipDefaults.filterChipBorder(
+                            borderColor = Color.Transparent,
+                            selectedBorderColor = Color.Transparent,
+                            enabled = true,
+                            selected = selectedMethod == method.name
+                        )
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(20.dp))
+
+            // Photos section
+            Text(
+                "Foto de entrega (opcional)",
+                color = OnSurfaceVariantDark,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 0.8.sp,
+                modifier = Modifier.padding(bottom = 10.dp)
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(
+                    onClick = {
+                        val file = File(context.cacheDir, "delivery_${System.currentTimeMillis()}.jpg")
+                        val uri = FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
+                        cameraUri = uri
+                        cameraLauncher.launch(uri)
+                    },
+                    enabled = photoUris.size < 4,
+                    border = ButtonDefaults.outlinedButtonBorder(enabled = photoUris.size < 4),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Cámara")
+                }
+                OutlinedButton(
+                    onClick = { galleryLauncher.launch("image/*") },
+                    enabled = photoUris.size < 4,
+                    border = ButtonDefaults.outlinedButtonBorder(enabled = photoUris.size < 4),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(Icons.Default.PhotoLibrary, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Galería")
+                }
+            }
+
+            if (photoUris.isNotEmpty()) {
+                Spacer(Modifier.height(10.dp))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.horizontalScroll(rememberScrollState())
+                ) {
+                    photoUris.forEachIndexed { index, uri ->
+                        Box {
+                            AsyncImage(
+                                model = uri,
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .size(72.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                            )
+                            IconButton(
+                                onClick = { photoUris = photoUris.toMutableList().also { it.removeAt(index) } },
+                                modifier = Modifier.align(Alignment.TopEnd).size(24.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier.size(20.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.7f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(Icons.Default.Close, contentDescription = "Quitar", tint = Color.White, modifier = Modifier.size(12.dp))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(24.dp))
+
+            // Confirm button
+            Button(
+                onClick = { selectedMethod?.let { onConfirm(it, photoUris) } },
+                enabled = selectedMethod != null && !isDelivering,
+                modifier = Modifier.fillMaxWidth().height(52.dp),
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary)
+            ) {
+                if (isDelivering) {
+                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                } else {
+                    Text("Confirmar Entrega", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                }
+            }
+
+            Spacer(Modifier.height(32.dp))
         }
     }
 }
@@ -567,97 +761,137 @@ private fun AddStaffRow(onClick: () -> Unit) {
 }
 
 @Composable
-private fun StatusSection(
+private fun StatusTimeline(
     currentStatus: OrderStatus,
+    statusHistory: List<OrderStatusHistory>,
+    orderCreatedAt: OffsetDateTime,
     pendingStatus: OrderStatus?,
+    isLocked: Boolean,
     onMarkNext: (OrderStatus) -> Unit,
     onUndo: () -> Unit
 ) {
-    val statuses = listOf(OrderStatus.EnProceso, OrderStatus.Terminado, OrderStatus.Entregado)
-    val currentIndex = statuses.indexOf(currentStatus)
+    val timelineStatuses = listOf(
+        OrderStatus.EnProceso,
+        OrderStatus.Lavando,
+        OrderStatus.Terminado,
+        OrderStatus.Entregado
+    )
+    val currentIndex = timelineStatuses.indexOf(currentStatus).coerceAtLeast(0)
     val nextStatus = when (currentStatus) {
-        OrderStatus.EnProceso -> OrderStatus.Terminado
+        OrderStatus.EnProceso -> OrderStatus.Lavando
+        OrderStatus.Lavando -> OrderStatus.Terminado
         OrderStatus.Terminado -> OrderStatus.Entregado
         else -> null
     }
 
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(
+    val dateFormatter = remember { DateTimeFormatter.ofPattern("dd/MM/yy") }
+    val timeFormatter = remember { DateTimeFormatter.ofPattern("HH:mm") }
+
+    Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(16.dp))
                 .background(SurfaceCardDark)
-                .padding(horizontal = 20.dp, vertical = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(horizontal = 20.dp, vertical = 16.dp)
         ) {
-            statuses.forEachIndexed { index, status ->
+            timelineStatuses.forEachIndexed { index, status ->
                 val isPast = index < currentIndex
                 val isCurrent = index == currentIndex
                 val isPending = status == pendingStatus
+                val isReached = isPast || isCurrent
 
                 val dotColor by animateColorAsState(
                     targetValue = when {
                         isPending -> OrangePrimary
-                        isCurrent -> Color.White
-                        isPast -> OnSurfaceVariantDark.copy(alpha = 0.5f)
-                        else -> OnSurfaceVariantDark.copy(alpha = 0.2f)
+                        isReached -> OrangePrimary
+                        else -> OnSurfaceVariantDark.copy(alpha = 0.3f)
                     },
-                    animationSpec = tween(200), label = "dot_$index"
-                )
-                val labelColor by animateColorAsState(
-                    targetValue = when {
-                        isPending -> OrangePrimary
-                        isCurrent -> Color.White
-                        isPast -> OnSurfaceVariantDark
-                        else -> OnSurfaceVariantDark.copy(alpha = 0.35f)
-                    },
-                    animationSpec = tween(200), label = "label_$index"
+                    animationSpec = tween(300), label = "dot_$index"
                 )
 
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(5.dp)
-                ) {
-
-                    if (isPast) {
-                        Icon(Icons.Default.Check, contentDescription = null, tint = OnSurfaceVariantDark.copy(alpha = 0.5f), modifier = Modifier.size(9.dp))
-                    } else {
-                        Box(
-                            modifier = Modifier.size(7.dp).clip(CircleShape).background(dotColor)
+                val historyEntry = when {
+                    status == OrderStatus.EnProceso && isReached -> {
+                        statusHistory.find { it.status == status } ?: OrderStatusHistory(
+                            id = "", orderId = "", status = status, createdAt = orderCreatedAt
                         )
                     }
-                    Text(
-                        text = status.toDisplayLabel(),
-                        color = labelColor,
-                        fontSize = 10.sp,
-                        fontWeight = if (isCurrent || isPending) FontWeight.SemiBold else FontWeight.Normal,
-                        textAlign = TextAlign.Center
-                    )
+                    isReached -> statusHistory.find { it.status == status }
+                    else -> null
                 }
 
-                if (index < statuses.size - 1) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Dot
+                    Box(
+                        modifier = Modifier.size(12.dp).clip(CircleShape).background(dotColor),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (isPast) {
+                            Icon(Icons.Default.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(8.dp))
+                        }
+                    }
+
+                    Spacer(Modifier.width(14.dp))
+
+                    // Status name
+                    Text(
+                        text = status.toDisplayLabel(),
+                        color = if (isReached || isPending) Color.White else OnSurfaceVariantDark.copy(alpha = 0.4f),
+                        fontSize = 14.sp,
+                        fontWeight = if (isCurrent) FontWeight.SemiBold else FontWeight.Normal,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    // Date + time
+                    if (historyEntry != null) {
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(
+                                text = historyEntry.createdAt.format(dateFormatter),
+                                color = OnSurfaceVariantDark,
+                                fontSize = 12.sp
+                            )
+                            Text(
+                                text = historyEntry.createdAt.format(timeFormatter),
+                                color = OnSurfaceVariantDark.copy(alpha = 0.7f),
+                                fontSize = 11.sp
+                            )
+                        }
+                    }
+                }
+
+                // Vertical line between dots
+                if (index < timelineStatuses.size - 1) {
+                    val lineColor by animateColorAsState(
+                        targetValue = if (index < currentIndex || (isCurrent && isPending))
+                            OrangePrimary
+                        else
+                            OnSurfaceVariantDark.copy(alpha = 0.15f),
+                        animationSpec = tween(300), label = "line_$index"
+                    )
                     Box(
                         modifier = Modifier
-                            .weight(1f)
-                            .padding(bottom = 14.dp)
-                            .height(1.dp)
-                            .background(
-                                if (index < currentIndex) OnSurfaceVariantDark.copy(alpha = 0.4f)
-                                else OnSurfaceVariantDark.copy(alpha = 0.15f)
-                            )
+                            .padding(start = 5.dp)
+                            .width(2.dp)
+                            .height(28.dp)
+                            .background(lineColor)
                     )
                 }
             }
         }
 
-        if (nextStatus != null) {
+        // Action button (only if not locked)
+        if (!isLocked && nextStatus != null) {
+            Spacer(Modifier.height(10.dp))
             if (pendingStatus != null) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        "Siguiente estado: ${nextStatus.toDisplayLabel()}",
+                        "Siguiente: ${nextStatus.toDisplayLabel()}",
                         color = OrangePrimary,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium,
@@ -713,9 +947,10 @@ private fun StaffPickerRow(member: StaffMember, onClick: () -> Unit) {
 
 private fun OrderStatus.toDisplayLabel(): String = when (this) {
     OrderStatus.EnProceso -> "En Proceso"
+    OrderStatus.Lavando -> "Lavando"
     OrderStatus.Terminado -> "Terminado"
     OrderStatus.Entregado -> "Entregado"
-    OrderStatus.Cancelado -> "Cancelado"
+    OrderStatus.Anulado -> "Anulado"
 }
 
 private fun StaffRole.toDisplayName(): String = when (this) {

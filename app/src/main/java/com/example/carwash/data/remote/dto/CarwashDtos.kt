@@ -171,3 +171,12 @@ data class PromotionScopeDto(
     @SerialName("scope_ref_id") val scopeRefId: String,
     @SerialName("created_at") val createdAt: String
 )
+
+@Serializable
+data class PaymentMethodDto(
+    val id: String,
+    val name: String,
+    val description: String? = null,
+    @SerialName("is_active") val isActive: Boolean = true,
+    @SerialName("company_id") val companyId: String? = null
+)

@@ -4,6 +4,7 @@ import com.example.carwash.data.remote.dto.CompanyDto
 import com.example.carwash.data.remote.dto.CustomerDto
 import com.example.carwash.data.remote.dto.InventoryItemDto
 import com.example.carwash.data.remote.dto.OrderDto
+import com.example.carwash.data.remote.dto.PaymentMethodDto
 import com.example.carwash.data.remote.dto.OrderItemDto
 import com.example.carwash.data.remote.dto.OrderStaffDto
 import com.example.carwash.data.remote.dto.OrderStatusHistoryDto
@@ -67,9 +68,11 @@ private fun String.toPromotionScope(): PromotionScope = when (this) {
 
 private fun String.toOrderStatus(): OrderStatus = when (this) {
     "En Proceso" -> OrderStatus.EnProceso
+    "Lavando" -> OrderStatus.Lavando
     "Terminado" -> OrderStatus.Terminado
-    "Cancelado" -> OrderStatus.Cancelado
     "Entregado" -> OrderStatus.Entregado
+    "Anulado" -> OrderStatus.Anulado
+    "Cancelado" -> OrderStatus.Anulado
     else -> OrderStatus.EnProceso
 }
 
@@ -185,6 +188,8 @@ fun PromotionDto.toDomain() = Promotion(
     updatedAt = updatedAt.toOffsetDateTime()
 )
 
+fun PaymentMethodDto.toDomain() = PaymentMethod(id = id, name = name)
+
 fun OrderItemDto.toDomain() = OrderItem(
     id = id,
     orderId = orderId,
@@ -255,5 +260,6 @@ fun OrderWithDetailsDto.toDomain() = Order(
     customer = customers?.toDomain(),
     vehicle = vehicles?.toDomain(),
     items = orderItems.map { it.toDomain() },
-    staff = orderStaff.map { it.toDomain() }
+    staff = orderStaff.map { it.toDomain() },
+    statusHistory = orderStatusHistory.map { it.toDomain() }
 )

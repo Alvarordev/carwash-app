@@ -47,6 +47,7 @@ import com.example.carwash.ui.theme.OnSurfaceVariantDark
 import com.example.carwash.ui.theme.OrangePrimary
 import com.example.carwash.ui.theme.StatusInProgress
 import com.example.carwash.ui.theme.StatusPending
+import com.example.carwash.ui.theme.StatusWashing
 import com.example.carwash.ui.theme.SurfaceStatsDark
 
 @Composable
@@ -82,7 +83,7 @@ fun DashboardScreen(
 
             StatsCard(
                 completedCount = uiState.todayCompletedCount,
-                inProgressCount = uiState.inProgressCount,
+                washingCount = uiState.washingCount,
                 pendingCount = uiState.pendingCount
             )
 
@@ -167,7 +168,7 @@ private fun DashboardHeader() {
 }
 
 @Composable
-private fun StatsCard(completedCount: Int, inProgressCount: Int, pendingCount: Int) {
+private fun StatsCard(completedCount: Int, washingCount: Int, pendingCount: Int) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -227,9 +228,9 @@ private fun StatsCard(completedCount: Int, inProgressCount: Int, pendingCount: I
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 StatusChip(
-                    label = "En Proceso",
-                    count = inProgressCount,
-                    dotColor = StatusInProgress,
+                    label = "Lavando",
+                    count = washingCount,
+                    dotColor = StatusWashing,
                     modifier = Modifier.weight(1f)
                 )
                 StatusChip(

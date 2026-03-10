@@ -1,5 +1,6 @@
 package com.example.carwash.domain.repository
 
+import android.net.Uri
 import com.example.carwash.data.remote.dto.OrderStatus
 import com.example.carwash.data.remote.dto.PaymentStatus
 import com.example.carwash.domain.model.CreateOrderRequest
@@ -7,6 +8,7 @@ import com.example.carwash.domain.model.Order
 import com.example.carwash.domain.model.OrderItemRequest
 import com.example.carwash.domain.model.OrderPeriod
 import com.example.carwash.domain.model.OrderStatusHistory
+import com.example.carwash.domain.model.PaymentMethod
 import kotlinx.coroutines.flow.Flow
 
 interface OrderRepository {
@@ -34,4 +36,7 @@ interface OrderRepository {
         toAdd: List<OrderItemRequest>,
         toRemove: List<String>
     ): Result<Unit>
+
+    suspend fun getPaymentMethods(): Result<List<PaymentMethod>>
+    suspend fun deliverOrder(orderId: String, paymentMethod: String, newPhotoUris: List<Uri>): Result<Unit>
 }

@@ -42,6 +42,7 @@ import com.example.carwash.ui.theme.SurfaceCardDark
 import java.time.OffsetDateTime
 import java.time.temporal.ChronoUnit
 import androidx.core.graphics.toColorInt
+import com.example.carwash.ui.theme.StatusWashing
 
 @Composable
 fun ActiveOrderCard(order: Order, modifier: Modifier = Modifier) {
@@ -124,6 +125,7 @@ fun ActiveOrderCard(order: Order, modifier: Modifier = Modifier) {
                 }
                 Spacer(Modifier.height(4.dp))
                 val (statusLabel, statusColor) = when (order.status) {
+                    OrderStatus.Lavando -> "Lavando" to StatusInProgress
                     OrderStatus.Terminado -> "Terminado" to StatusPending
                     else -> "En Proceso" to StatusInProgress
                 }
@@ -160,9 +162,10 @@ fun OrderListCard(order: Order, modifier: Modifier = Modifier) {
 
     val (statusLabel, statusColor) = when (order.status) {
         OrderStatus.EnProceso  -> "EN PROCESO" to StatusInProgress
+        OrderStatus.Lavando    -> "LAVANDO"    to StatusWashing
         OrderStatus.Terminado  -> "TERMINADO"  to StatusPending
         OrderStatus.Entregado  -> "ENTREGADO"  to StatusDone
-        OrderStatus.Cancelado  -> "CANCELADO"  to StatusCancelled
+        OrderStatus.Anulado    -> "ANULADO"    to StatusCancelled
     }
 
     Box(
@@ -173,7 +176,6 @@ fun OrderListCard(order: Order, modifier: Modifier = Modifier) {
             .padding(horizontal = 16.dp, vertical = 14.dp)
     ) {
         Column {
-            // Top row: vehicle name + time ago
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -194,7 +196,6 @@ fun OrderListCard(order: Order, modifier: Modifier = Modifier) {
 
             Spacer(Modifier.height(4.dp))
 
-            // Plate row
             Text(
                 text = plate,
                 color = OnSurfaceVariantDark,
@@ -203,7 +204,6 @@ fun OrderListCard(order: Order, modifier: Modifier = Modifier) {
 
             Spacer(Modifier.height(10.dp))
 
-            // Bottom row: service icon + name + status pill
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (serviceIconRes != null) {
                     Icon(
@@ -227,26 +227,25 @@ fun OrderListCard(order: Order, modifier: Modifier = Modifier) {
                     fontSize = 13.sp,
                     modifier = Modifier.weight(1f)
                 )
-                // Status pill
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(20.dp))
-                        .background(statusColor.copy(alpha = 0.15f))
+                        .background(statusColor)
                         .padding(horizontal = 10.dp, vertical = 4.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(6.dp)
-                                .clip(CircleShape)
-                                .background(statusColor)
-                        )
-                        Spacer(Modifier.width(5.dp))
+//                        Box(
+//                            modifier = Modifier
+//                                .size(6.dp)
+//                                .clip(CircleShape)
+//                                .background(statusColor)
+//                        )
+//                        Spacer(Modifier.width(5.dp))
                         Text(
                             text = statusLabel,
-                            color = statusColor,
+                            color = MaterialTheme.colorScheme.onBackground,
                             fontSize = 10.sp,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 }

@@ -308,6 +308,15 @@ class InventoryRemoteDataSource @Inject constructor(
     }
 }
 
+class PaymentMethodRemoteDataSource @Inject constructor(
+    private val client: SupabaseClient
+) {
+    suspend fun getActive(): List<PaymentMethodDto> =
+        client.postgrest["payment_methods"]
+            .select { filter { eq("is_active", true) } }
+            .decodeList()
+}
+
 class PromotionRemoteDataSource @Inject constructor(
     private val client: SupabaseClient
 ) {

@@ -7,6 +7,7 @@ import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.auth.status.SessionStatus
+import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -25,7 +26,11 @@ class AuthRepositoryImpl @Inject constructor(
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             client.auth.sessionStatus.collect { status ->
                 if (status is SessionStatus.Authenticated && !companySession.isResolved) {
-                    resolveCompanySession()
+                    try {
+                        resolveCompanySession()
+                    } catch (e: Exception) {
+                        Log.e("AuthRepository", "Failed to resolve company session (no internet?)", e)
+                    }
                 }
             }
         }

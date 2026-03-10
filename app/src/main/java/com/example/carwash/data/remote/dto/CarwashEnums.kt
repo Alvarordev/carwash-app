@@ -38,9 +38,10 @@ enum class PromotionScopeType {
 
 enum class OrderStatus {
     En_Proceso,
+    Lavando,
     Terminado,
-    Cancelado,
-    Entregado
+    Entregado,
+    Anulado
 }
 
 enum class PaymentStatus {

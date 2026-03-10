@@ -103,6 +103,8 @@ data class InventoryItem(
     val isLowStock: Boolean get() = quantity <= minQuantity
 }
 
+data class PaymentMethod(val id: String, val name: String)
+
 data class Promotion(
     val id: String,
     val name: String,
