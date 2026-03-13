@@ -56,9 +56,11 @@ class AuthRepositoryImpl @Inject constructor(
         val companyId = user.appMetadata?.get("company_id")?.jsonPrimitive?.content ?: return
         companySession.companyId = companyId
 
+        companySession.staffName = user.userMetadata
+            ?.get("first_name")?.jsonPrimitive?.content?.takeIf { it.isNotBlank() }
+
         val email = user.email ?: return
         val staff = companyDataSource.getStaffByEmail(email)
         companySession.staffMemberId = staff?.id
-        companySession.staffName = staff?.let { "${it.firstName} ${it.lastName}" }
     }
 }

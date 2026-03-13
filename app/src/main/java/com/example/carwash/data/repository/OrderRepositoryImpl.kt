@@ -15,6 +15,7 @@ import com.example.carwash.data.remote.dto.OrderStatus
 import com.example.carwash.data.remote.dto.PaymentStatus
 import com.example.carwash.data.remote.dto.UpdateOrderStatusDto
 import com.example.carwash.data.session.CompanySession
+import com.example.carwash.util.ImageCompressor
 import com.example.carwash.domain.model.CreateOrderRequest
 import com.example.carwash.domain.model.Order
 import com.example.carwash.domain.model.OrderItemRequest
@@ -24,6 +25,7 @@ import com.example.carwash.domain.model.PaymentMethod
 import com.example.carwash.domain.repository.OrderRepository
 import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.ZoneId
 import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
@@ -92,9 +94,7 @@ constructor(
                     val byteArrays =
                             order.photos.mapNotNull { uri ->
                                 runCatching {
-                                            contentResolver.openInputStream(uri)?.use {
-                                                it.readBytes()
-                                            }
+                                            ImageCompressor.compress(contentResolver, uri)
                                         }
                                         .getOrNull()
                             }
@@ -286,6 +286,15 @@ constructor(
         orderDataSource.updateTotals(orderId, newSubtotal, 0.0, newSubtotal)
     }
 
+    override fun observeOrdersByDate(date: LocalDate): Flow<Result<List<Order>>> {
+        val zoneId = ZoneId.of("America/Lima")
+        val startIso = date.atStartOfDay(zoneId).toOffsetDateTime().toString()
+        val endIso = date.atTime(LocalTime.of(23, 59, 59)).atZone(zoneId).toOffsetDateTime().toString()
+        return orderDataSource.observeOrdersByPeriod(startIso, endIso)
+            .map { dtos -> Result.success(dtos.map { it.toDomain() }) }
+            .catch { e -> emit(Result.failure(e)) }
+    }
+
     override fun observeOrdersByPeriod(period: OrderPeriod): Flow<Result<List<Order>>> {
         val zoneId = ZoneId.of("America/Lima")
         val today = LocalDate.now(zoneId)
@@ -327,7 +336,7 @@ constructor(
         if (newPhotoUris.isNotEmpty()) {
             val order = orderDataSource.getByIdWithDetails(orderId).toDomain()
             val byteArrays = newPhotoUris.mapNotNull { uri ->
-                runCatching { contentResolver.openInputStream(uri)?.use { it.readBytes() } }.getOrNull()
+                runCatching { ImageCompressor.compress(contentResolver, uri) }.getOrNull()
             }
             val newUrls = if (byteArrays.isNotEmpty()) {
                 try {

@@ -13,12 +13,14 @@ import io.github.jan.supabase.realtime.realtime
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class OrderRemoteDataSource @Inject constructor(
     private val client: SupabaseClient
@@ -37,7 +39,8 @@ class OrderRemoteDataSource @Inject constructor(
                 customers(*),
                 vehicles(*),
                 order_items(*, services(color, icon)),
-                order_staff(*)
+                order_staff(*),
+                order_status_history(*)
                 """.trimIndent()
                 )
             ) {
@@ -59,7 +62,8 @@ class OrderRemoteDataSource @Inject constructor(
                     customers(*),
                     vehicles(*),
                     order_items(*, services(color, icon)),
-                    order_staff(*)
+                    order_staff(*),
+                    order_status_history(*)
                     """.trimIndent()
                 )
             ) {
@@ -80,7 +84,7 @@ class OrderRemoteDataSource @Inject constructor(
                 .onEach { trySend(getAllForPeriod(startIso, endIso)) }
                 .launchIn(this)
             channel.subscribe()
-            awaitClose { sub.cancel(); launch { client.realtime.removeChannel(channel) } }
+            awaitClose { sub.cancel(); launch { withContext(NonCancellable) { client.realtime.removeChannel(channel) } } }
         }
 
     fun observeTodayOrders(): Flow<List<OrderWithDetailsDto>> = callbackFlow {
@@ -96,7 +100,7 @@ class OrderRemoteDataSource @Inject constructor(
 
         awaitClose {
             sub.cancel()
-            launch { client.realtime.removeChannel(channel) }
+            launch { withContext(NonCancellable) { client.realtime.removeChannel(channel) } }
         }
     }
 

@@ -1,6 +1,5 @@
 package com.example.carwash.presentation.viewmodel
 
-import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -10,7 +9,6 @@ import com.example.carwash.domain.model.OrderItem
 import com.example.carwash.domain.model.OrderItemRequest
 import com.example.carwash.domain.model.OrderStaff
 import com.example.carwash.domain.model.OrderStatus
-import com.example.carwash.domain.model.PaymentMethod
 import com.example.carwash.domain.model.Service
 import com.example.carwash.domain.model.StaffMember
 import com.example.carwash.domain.repository.OrderRepository
@@ -34,16 +32,12 @@ data class OrderDetailsUiState(
     val order: Order? = null,
     val availableStaff: List<StaffMember> = emptyList(),
     val availableServices: List<Service> = emptyList(),
-    val selectedStatus: OrderStatus? = null,
     val pendingStaff: List<OrderStaff> = emptyList(),
     val pendingItems: List<OrderItem> = emptyList(),
     val isLoading: Boolean = true,
     val isSaving: Boolean = false,
     val errorMessage: String? = null,
-    val saveSuccess: Boolean = false,
-    val showDeliverySheet: Boolean = false,
-    val paymentMethods: List<PaymentMethod> = emptyList(),
-    val isDelivering: Boolean = false
+    val saveSuccess: Boolean = false
 )
 
 @HiltViewModel
@@ -66,10 +60,6 @@ class OrderDetailsViewModel @Inject constructor(
             .onEach { services -> _uiState.update { it.copy(availableServices = services) } }
             .catch { }
             .launchIn(viewModelScope)
-        viewModelScope.launch {
-            orderRepository.getPaymentMethods()
-                .onSuccess { methods -> _uiState.update { it.copy(paymentMethods = methods) } }
-        }
     }
 
     fun load() {
@@ -90,69 +80,11 @@ class OrderDetailsViewModel @Inject constructor(
                     availableStaff = staff,
                     pendingStaff = order?.staff ?: emptyList(),
                     pendingItems = order?.items ?: emptyList(),
-                    selectedStatus = null,
                     isLoading = false,
                     errorMessage = orderResult.exceptionOrNull()?.message
                 )
             }
         }
-    }
-
-    // ── Status ───────────────────────────────────────────────────────────────
-
-    fun selectStatus(status: OrderStatus) {
-        val order = _uiState.value.order ?: return
-        val nextValid = nextValidStatus(order.status) ?: return
-        if (status != nextValid) return
-        if (status == OrderStatus.Entregado) {
-            _uiState.update { it.copy(showDeliverySheet = true) }
-            return
-        }
-        val newValue = if (_uiState.value.selectedStatus == status) null else status
-        _uiState.update { it.copy(selectedStatus = newValue) }
-    }
-
-    fun undoStatus() = _uiState.update { it.copy(selectedStatus = null) }
-
-    fun dismissDeliverySheet() {
-        _uiState.update { it.copy(showDeliverySheet = false) }
-    }
-
-    fun confirmDelivery(paymentMethod: String, photoUris: List<Uri>) {
-        _uiState.update { it.copy(isDelivering = true) }
-        viewModelScope.launch {
-            orderRepository.deliverOrder(orderId, paymentMethod, photoUris)
-                .onSuccess {
-                    _uiState.update { it.copy(isDelivering = false, showDeliverySheet = false) }
-                    getOrderById(orderId)
-                        .onSuccess { refreshed ->
-                            _uiState.update {
-                                it.copy(
-                                    order = refreshed,
-                                    pendingStaff = refreshed.staff,
-                                    pendingItems = refreshed.items,
-                                    selectedStatus = null,
-                                    saveSuccess = true
-                                )
-                            }
-                        }
-                }
-                .onFailure { e ->
-                    _uiState.update {
-                        it.copy(
-                            isDelivering = false,
-                            errorMessage = e.message ?: "Error al entregar la orden"
-                        )
-                    }
-                }
-        }
-    }
-
-    fun nextValidStatus(current: OrderStatus): OrderStatus? = when (current) {
-        OrderStatus.EnProceso -> OrderStatus.Lavando
-        OrderStatus.Lavando -> OrderStatus.Terminado
-        OrderStatus.Terminado -> OrderStatus.Entregado
-        else -> null
     }
 
     // ── Staff ────────────────────────────────────────────────────────────────
@@ -212,19 +144,6 @@ class OrderDetailsViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                // Status
-                val newStatus = state.selectedStatus
-                if (newStatus != null && newStatus != order.status) {
-                    val dtoStatus = when (newStatus) {
-                        OrderStatus.EnProceso -> DtoOrderStatus.En_Proceso
-                        OrderStatus.Lavando -> DtoOrderStatus.Lavando
-                        OrderStatus.Terminado -> DtoOrderStatus.Terminado
-                        OrderStatus.Entregado -> DtoOrderStatus.Entregado
-                        OrderStatus.Anulado -> DtoOrderStatus.Anulado
-                    }
-                    orderRepository.updateOrderStatus(orderId, dtoStatus).getOrThrow()
-                }
-
                 // Staff
                 val originalStaffIds = order.staff.mapNotNull { it.staffId }.toSet()
                 val pendingStaffIds = state.pendingStaff.mapNotNull { it.staffId }.toSet()
@@ -265,7 +184,6 @@ class OrderDetailsViewModel @Inject constructor(
                                 order = refreshed,
                                 pendingStaff = refreshed.staff,
                                 pendingItems = refreshed.items,
-                                selectedStatus = null,
                                 isSaving = false,
                                 saveSuccess = true
                             )

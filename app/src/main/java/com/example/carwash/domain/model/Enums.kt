@@ -6,7 +6,13 @@ enum class DocumentType { Dni, CarnetExtranjeria, Pasaporte }
 
 enum class StaffRole { Admin, Washer, Cashier, Supervisor }
 
-enum class ServiceCategory { Exterior, Interior, Detalle, Aniadido }
+data class ServiceCategory(
+    val id: String,
+    val name: String,
+    val description: String? = null,
+    val color: String? = null,
+    val icon: String? = null
+)
 
 enum class DiscountType { Percentage, Fixed }
 

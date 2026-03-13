@@ -15,6 +15,7 @@ import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
+import com.example.carwash.util.ImageCompressor
 import javax.inject.Inject
 import kotlinx.serialization.json.Json
 import io.ktor.client.engine.okhttp.OkHttp
@@ -36,7 +37,7 @@ class VehicleAnalysisDatasource @Inject constructor(
             header(HttpHeaders.Authorization, "Bearer $accessToken")
             setBody(MultiPartFormDataContent(formData {
                 photos.firstOrNull()?.let { uri ->
-                    val bytes = contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                    val bytes = ImageCompressor.compress(contentResolver, uri)
                         ?: return@let
                     append(
                         key = "image",

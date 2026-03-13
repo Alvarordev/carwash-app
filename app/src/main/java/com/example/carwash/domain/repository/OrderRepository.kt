@@ -7,6 +7,7 @@ import com.example.carwash.domain.model.CreateOrderRequest
 import com.example.carwash.domain.model.Order
 import com.example.carwash.domain.model.OrderItemRequest
 import com.example.carwash.domain.model.OrderPeriod
+import java.time.LocalDate
 import com.example.carwash.domain.model.OrderStatusHistory
 import com.example.carwash.domain.model.PaymentMethod
 import kotlinx.coroutines.flow.Flow
@@ -25,6 +26,7 @@ interface OrderRepository {
     suspend fun registerPayment(orderId: String, paymentMethod: String, paymentStatus: PaymentStatus): Result<Unit>
     suspend fun getOrdersByPeriod(period: OrderPeriod): Result<List<Order>>
     fun observeOrdersByPeriod(period: OrderPeriod): Flow<Result<List<Order>>>
+    fun observeOrdersByDate(date: LocalDate): Flow<Result<List<Order>>>
     suspend fun updateOrderStaff(
         orderId: String,
         toAdd: List<String>,

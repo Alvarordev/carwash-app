@@ -3,10 +3,7 @@ package com.example.carwash.data.repository
 import com.example.carwash.data.mapper.toDomain
 import com.example.carwash.data.remote.datasource.ServicePricingRemoteDataSource
 import com.example.carwash.data.remote.datasource.ServiceRemoteDataSource
-import com.example.carwash.data.remote.dto.ServiceDto
-import com.example.carwash.domain.model.EntityStatus
 import com.example.carwash.domain.model.Service
-import com.example.carwash.domain.model.ServiceCategory
 import com.example.carwash.domain.repository.ServiceRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -21,16 +18,12 @@ class ServiceRepositoryImpl @Inject constructor(
         emit(serviceDataSource.getAll().map { it.toDomain() })
     }
 
-    override suspend fun getActiveServices(): Result<List<Service>> = runCatching {
+    override suspend fun getActiveServices() = runCatching {
         serviceDataSource.getActive().map { it.toDomain() }
     }
 
-    override suspend fun getServicesByCategory(category: ServiceCategory): Result<List<Service>> = runCatching {
-        val categoryStr = when (category) {
-            ServiceCategory.Aniadido -> "añadido"
-            else -> category.name.lowercase()
-        }
-        serviceDataSource.getByCategory(categoryStr).map { it.toDomain() }
+    override suspend fun getServicesByCategoryId(categoryId: String) = runCatching {
+        serviceDataSource.getByCategoryId(categoryId).map { it.toDomain() }
     }
 
     override suspend fun getServicePricing(
@@ -44,24 +37,23 @@ class ServiceRepositoryImpl @Inject constructor(
         pricingDataSource.getAll().map { it.toDomain() }
     }
 
-    override suspend fun addService(service: Service): Result<Service> = runCatching {
+    override suspend fun addService(service: Service) = runCatching {
         serviceDataSource.insert(service.toDto()).toDomain()
     }
 
-    override suspend fun updateService(service: Service): Result<Unit> = runCatching {
+    override suspend fun updateService(service: Service) = runCatching {
         serviceDataSource.update(service.id, service.toDto())
     }
 
-    private fun Service.toDto() = ServiceDto(
+    private fun Service.toDto() = com.example.carwash.data.remote.dto.ServiceDto(
         id = id,
         name = name,
         description = description,
-        category = when (category) {
-            ServiceCategory.Aniadido -> "añadido"
-            else -> category.name.lowercase()
-        },
-        status = if (status == EntityStatus.Active) "active" else "inactive",
+        categoryId = categoryId,
+        status = if (status == com.example.carwash.domain.model.EntityStatus.Active) "active" else "inactive",
         createdAt = createdAt.toString(),
-        updatedAt = updatedAt.toString()
+        updatedAt = updatedAt.toString(),
+        color = color,
+        icon = icon
     )
 }

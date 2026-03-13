@@ -71,17 +71,29 @@ data class StaffMemberDto(
 )
 
 @Serializable
+data class ServiceCategoryDto(
+    val id: String,
+    val name: String,
+    val description: String? = null,
+    val color: String? = null,
+    val icon: String? = null,
+    val status: String? = null,
+    @SerialName("company_id") val companyId: String? = null
+)
+
+@Serializable
 data class ServiceDto(
     val id: String,
     val name: String,
     val description: String? = null,
-    val category: String,
+    @SerialName("category_id") val categoryId: String,
     val status: String,
     @SerialName("created_at") val createdAt: String,
     @SerialName("updated_at") val updatedAt: String,
     @SerialName("company_id") val companyId: String? = null,
     val color: String? = null,
-    val icon: String? = null
+    val icon: String? = null,
+    @SerialName("service_categories") val serviceCategory: ServiceCategoryDto? = null
 )
 
 @Serializable

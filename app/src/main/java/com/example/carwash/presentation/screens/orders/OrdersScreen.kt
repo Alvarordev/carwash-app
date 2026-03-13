@@ -148,7 +148,7 @@ fun OrdersScreen(
                 }
                 else -> {
                     LazyColumn(
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(24.dp),
                         contentPadding = PaddingValues(bottom = 80.dp)
                     ) {
                         items(uiState.orders) { order ->

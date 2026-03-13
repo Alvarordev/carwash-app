@@ -18,13 +18,6 @@ enum class StaffRole {
     supervisor
 }
 
-enum class ServiceCategory {
-    exterior,
-    interior,
-    detalle,
-    añadido
-}
-
 enum class DiscountType {
     percentage,
     fixed

@@ -10,6 +10,7 @@ import com.example.carwash.data.remote.dto.OrderStaffDto
 import com.example.carwash.data.remote.dto.OrderStatusHistoryDto
 import com.example.carwash.data.remote.dto.OrderWithDetailsDto
 import com.example.carwash.data.remote.dto.PromotionDto
+import com.example.carwash.data.remote.dto.ServiceCategoryDto
 import com.example.carwash.data.remote.dto.ServiceDto
 import com.example.carwash.data.remote.dto.ServicePricingDto
 import com.example.carwash.data.remote.dto.StaffMemberDto
@@ -45,14 +46,6 @@ private fun String.toStaffRole(): StaffRole = when (this) {
 
 private fun String?.toStaffRoleOrNull(): StaffRole? = this?.let {
     runCatching { it.toStaffRole() }.getOrNull()
-}
-
-private fun String.toServiceCategory(): ServiceCategory = when (this) {
-    "exterior" -> ServiceCategory.Exterior
-    "interior" -> ServiceCategory.Interior
-    "detalle" -> ServiceCategory.Detalle
-    "añadido" -> ServiceCategory.Aniadido
-    else -> ServiceCategory.Exterior
 }
 
 private fun String.toDiscountType(): DiscountType = when (this) {
@@ -140,11 +133,20 @@ fun StaffMemberDto.toDomain() = StaffMember(
     updatedAt = updatedAt.toOffsetDateTime()
 )
 
+fun ServiceCategoryDto.toDomain() = ServiceCategory(
+    id = id,
+    name = name,
+    description = description,
+    color = color,
+    icon = icon
+)
+
 fun ServiceDto.toDomain() = Service(
     id = id,
     name = name,
     description = description,
-    category = category.toServiceCategory(),
+    categoryId = categoryId,
+    category = serviceCategory?.toDomain(),
     status = status.toEntityStatus(),
     createdAt = createdAt.toOffsetDateTime(),
     updatedAt = updatedAt.toOffsetDateTime(),

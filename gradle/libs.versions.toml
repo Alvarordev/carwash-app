@@ -17,6 +17,7 @@ supabaseBom = "3.3.0"
 ksp = "2.2.21-2.0.5"
 camerax = "1.5.3"
 accompanist = "0.37.3"
+exifinterface = "1.4.2"
 
 [libraries]
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
@@ -56,6 +57,7 @@ camerax-compose = { group = "androidx.camera", name = "camera-compose", version.
 
 # Accompanist
 accompanist-permissions = { group = "com.google.accompanist", name = "accompanist-permissions", version.ref = "accompanist" }
+androidx-exifinterface = { group = "androidx.exifinterface", name = "exifinterface", version.ref = "exifinterface" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

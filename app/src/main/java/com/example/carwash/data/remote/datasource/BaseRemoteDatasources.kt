@@ -207,17 +207,17 @@ class ServiceRemoteDataSource @Inject constructor(
 ) {
     suspend fun getAll(): List<ServiceDto> =
         client.postgrest["services"]
-            .select()
+            .select(Columns.raw("*, service_categories(*)"))
             .decodeList()
 
     suspend fun getActive(): List<ServiceDto> =
         client.postgrest["services"]
-            .select { filter { eq("status", "active") } }
+            .select(Columns.raw("*, service_categories(*)")) { filter { eq("status", "active") } }
             .decodeList()
 
-    suspend fun getByCategory(category: String): List<ServiceDto> =
+    suspend fun getByCategoryId(categoryId: String): List<ServiceDto> =
         client.postgrest["services"]
-            .select { filter { eq("category", category) } }
+            .select(Columns.raw("*, service_categories(*)")) { filter { eq("category_id", categoryId) } }
             .decodeList()
 
     suspend fun insert(dto: ServiceDto): ServiceDto =

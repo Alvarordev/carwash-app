@@ -14,6 +14,7 @@ import com.example.carwash.domain.model.StaffMember
 import com.example.carwash.domain.model.Vehicle
 import com.example.carwash.domain.model.VehicleType
 import com.example.carwash.data.remote.datasource.VehicleAnalysisDatasource
+import com.example.carwash.data.session.CompanySession
 import com.example.carwash.domain.repository.CustomerRepository
 import com.example.carwash.domain.repository.VehicleRepository
 import com.example.carwash.domain.usecase.AddOrderUseCase
@@ -35,8 +36,6 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-
-private const val CASHIER_ID = "33333333-0003-0003-0003-000000000002"
 
 data class AddOrderUiState(
         val photos: List<Uri> = emptyList(),
@@ -70,7 +69,6 @@ data class AddOrderUiState(
         val selectedCustomer: Customer? = null,   // existing customer confirmed by user
         val customerSkipped: Boolean = false
 ) {
-    /** Subtotal computed from resolved prices, falling back to 0 if not found. */
     val subtotal: Double
         get() = selectedServices.sumOf { resolvedPrices[it.id] ?: 0.0 }
     val total: Double
@@ -90,6 +88,7 @@ constructor(
         private val vehicleRepository: VehicleRepository,
         private val vehicleAnalysisDataSource: VehicleAnalysisDatasource,
         private val customerRepository: CustomerRepository,
+        private val companySession: CompanySession,
 ) : ViewModel() {
 
     private var customerSearchJob: Job? = null
@@ -308,7 +307,7 @@ constructor(
             val request =
                     CreateOrderRequest(
                             vehicleId = vehicleId,
-                            cashierId = CASHIER_ID,
+                            cashierId = companySession.staffMemberId,
                             customerId = customerId,
                             items = orderItems,
                             staffIds = staffIds,

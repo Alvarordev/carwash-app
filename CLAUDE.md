@@ -47,7 +47,7 @@ di/AppModule.kt       # Hilt wiring for all datasources, repositories, session
 
 Every data operation is scoped to the authenticated staff member's company.
 
-- After login, `AuthRepositoryImpl` queries `staff_members` by email to resolve `companyId` and `staffMemberId`, which are stored in `CompanySession` (singleton, injected by Hilt).
+- After login, `AuthRepositoryImpl` queries `staff_members` by email to resolve `companyId`, `staffMemberId`, and `staffName`, which are stored in `CompanySession` (singleton, injected by Hilt).
 - All INSERT DTOs include a non-nullable `company_id` field.
 - All read DTOs include `company_id: String? = null` — Supabase RLS filters automatically.
 - Repositories that do writes (`OrderRepositoryImpl`, `CustomerRepositoryImpl`, `VehicleRepositoryImpl`) inject `CompanySession` and pass `companyId` to every create operation.
@@ -76,6 +76,14 @@ The AddOrder wizard shares a single `AddOrderViewModel` scoped to the parent nav
 
 **Repositories**: Own business logic: inject `CompanySession`, call datasource, map result. Return domain models, never DTOs.
 
+**ServiceCategory**: Not an enum — it's a domain model (`data class ServiceCategory`) backed by the `service_categories` DB table. `ServiceDto` embeds the joined category via `@SerialName("service_categories") val serviceCategory: ServiceCategoryDto?`. Services reference `categoryId: String` (FK), and `category: ServiceCategory?` is the resolved join.
+
+**Dashboard status advancement**: Order status transitions (EnProceso → Lavando → Terminado → Entregado) are driven from `DashboardScreen` via bottom sheets, not `OrderDetailsScreen`. `DashboardViewModel` manages `OrderSheetType` (sealed class: `StaffSelection`, `QualityChecklist`, `Delivery`). `OrderDetailsScreen` only edits staff/items.
+
+**Date navigation on Dashboard**: `DashboardViewModel` exposes `selectDate(LocalDate)` and uses `observeOrdersByDate` (real-time Flow filtered by day in `America/Lima` timezone). The default is today's date.
+
+**Image upload**: Use `ImageCompressor.compress(contentResolver, uri)` (in `util/ImageCompressor.kt`) before uploading to Supabase Storage. It resizes to max 1920px and compresses at 80% quality with EXIF rotation correction.
+
 **WhatsApp tables** (`whatsapp_*`): Webapp-only. No DTOs or models needed on mobile.
 
 **Theme**: Dark-first Material 3. Colors defined in `ui/theme/Color.kt`. Icons use `Icons.Filled` / `Icons.Outlined` from `material-icons-extended`.
@@ -83,4 +91,4 @@ The AddOrder wizard shares a single `AddOrderViewModel` scoped to the parent nav
 ## Supabase Backend
 
 Project ID: `mjocggnioqptesmjotpx` (us-east-1)
-Mobile tables: `companies`, `customers`, `staff_members`, `vehicles`, `vehicle_types`, `vehicle_owners`, `services`, `service_pricing`, `promotions`, `promotion_scopes`, `orders`, `order_items`, `order_staff`, `order_status_history`, `order_attachments`, `inventory_items`
+Mobile tables: `companies`, `customers`, `staff_members`, `vehicles`, `vehicle_types`, `vehicle_owners`, `services`, `service_categories`, `service_pricing`, `promotions`, `promotion_scopes`, `orders`, `order_items`, `order_staff`, `order_status_history`, `order_attachments`, `inventory_items`

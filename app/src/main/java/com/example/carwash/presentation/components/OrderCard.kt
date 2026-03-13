@@ -1,8 +1,11 @@
 package com.example.carwash.presentation.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,6 +17,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -29,113 +34,164 @@ import androidx.compose.ui.unit.sp
 import com.example.carwash.R
 import com.example.carwash.domain.model.Order
 import com.example.carwash.domain.model.OrderStatus
-import com.example.carwash.domain.model.ServiceCategory
-import com.example.carwash.ui.theme.ChipDetallado
-import com.example.carwash.ui.theme.ChipEncerado
-import com.example.carwash.ui.theme.ChipLavado
 import com.example.carwash.ui.theme.OnSurfaceVariantDark
+import com.example.carwash.ui.theme.OrangePrimary
 import com.example.carwash.ui.theme.StatusCancelled
 import com.example.carwash.ui.theme.StatusDone
 import com.example.carwash.ui.theme.StatusInProgress
 import com.example.carwash.ui.theme.StatusPending
-import com.example.carwash.ui.theme.SurfaceCardDark
-import java.time.OffsetDateTime
-import java.time.temporal.ChronoUnit
-import androidx.core.graphics.toColorInt
 import com.example.carwash.ui.theme.StatusWashing
+import com.example.carwash.ui.theme.SurfaceCardDark
+import androidx.core.graphics.toColorInt
 
 @Composable
-fun ActiveOrderCard(order: Order, modifier: Modifier = Modifier) {
-    val primaryItem = order.items.firstOrNull()
-    val serviceName = primaryItem?.serviceName ?: "Servicio"
-    val serviceCategory =
-            order.items.firstOrNull()?.let {
-                // Try to infer category from service name keywords
-                when {
-                    it.serviceName.contains("Detall", ignoreCase = true) -> ServiceCategory.Detalle
-                    it.serviceName.contains("Encera", ignoreCase = true) -> ServiceCategory.Aniadido
-                    else -> ServiceCategory.Exterior
-                }
-            }
-    val chipColor =
-            when (serviceCategory) {
-                ServiceCategory.Detalle -> ChipDetallado
-                ServiceCategory.Aniadido -> ChipEncerado
-                else -> ChipLavado
-            }
-
-    val vehicleDisplayName =
-            order.vehicle?.let { v -> "${v.brand} ${v.model ?: ""}".trim() } ?: "Vehículo"
+fun OrderListCard(
+    order: Order,
+    modifier: Modifier = Modifier,
+    onActionClick: () -> Unit = {}
+) {
+    val vehicleDisplayName = order.vehicle?.let { v ->
+        "${v.brand} ${v.model ?: ""}".trim().uppercase()
+    } ?: "VEHÍCULO"
     val plate = order.vehicle?.plate ?: order.orderNumber
+    val firstItem = order.items.firstOrNull()
+    val serviceName = firstItem?.serviceName ?: "Servicio"
+    val extraCount = order.items.size - 1
+    val serviceDisplay = if (extraCount > 0) "$serviceName (+$extraCount)" else serviceName
+    val total = order.total
+
+    val serviceColor = firstItem?.serviceColor?.let { hex ->
+        runCatching { Color(hex.toColorInt()) }.getOrNull()
+    } ?: OnSurfaceVariantDark
+    val serviceIconRes = serviceIconDrawable(firstItem?.serviceIcon)
+
+    val (statusLabel, statusColor) = when (order.status) {
+        OrderStatus.EnProceso  -> "Pendiente"  to StatusInProgress
+        OrderStatus.Lavando    -> "En Proceso" to StatusWashing
+        OrderStatus.Terminado  -> "Terminado"  to StatusPending
+        OrderStatus.Entregado  -> "Entregado"  to StatusDone
+        OrderStatus.Anulado    -> "Anulado"    to StatusCancelled
+    }
+
+    val (buttonText, buttonColor) = when (order.status) {
+        OrderStatus.EnProceso  -> "Iniciar Lavado"  to StatusInProgress
+        OrderStatus.Lavando    -> "Terminar Lavado"  to StatusWashing
+        OrderStatus.Terminado  -> "Finalizar Servicio" to StatusPending
+        OrderStatus.Entregado  -> "Ver Detalles"     to StatusDone
+        OrderStatus.Anulado    -> ""                  to Color.Transparent
+    }
 
     Box(
-            modifier =
-                    modifier.fillMaxWidth()
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(SurfaceCardDark)
-                            .padding(horizontal = 16.dp, vertical = 14.dp)
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(28.dp))
+            .background(SurfaceCardDark)
+            .border(width = 1.dp, color = Color(0xFF414141), shape = RoundedCornerShape(28.dp))
+            .padding(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 12.dp)
     ) {
-        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            // Car icon in rounded square
-            Box(
-                    modifier =
-                            Modifier.size(48.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(Color.White.copy(alpha = 0.08f)),
-                    contentAlignment = Alignment.Center
+        Column {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Icon(
-                        imageVector = Icons.Default.DirectionsCar,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(26.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.width(14.dp))
-
-            // Vehicle info
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                        text = vehicleDisplayName,
-                        color = Color.White,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 15.sp
-                )
-                Text(
-                        text = plate,
-                        color = OnSurfaceVariantDark,
-                        style = MaterialTheme.typography.bodySmall
-                )
-            }
-
-            Column(horizontalAlignment = Alignment.End) {
-                Box(
-                        modifier =
-                                Modifier.clip(RoundedCornerShape(6.dp))
-                                        .background(chipColor.copy(alpha = 0.18f))
-                                        .padding(horizontal = 10.dp, vertical = 4.dp)
-                ) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
-                            text = serviceName,
-                            color = chipColor,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 12.sp
+                        text = vehicleDisplayName,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = plate,
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
-                Spacer(Modifier.height(4.dp))
-                val (statusLabel, statusColor) = when (order.status) {
-                    OrderStatus.Lavando -> "Lavando" to StatusInProgress
-                    OrderStatus.Terminado -> "Terminado" to StatusPending
-                    else -> "En Proceso" to StatusInProgress
-                }
-                Box(
-                        modifier =
-                                Modifier.clip(RoundedCornerShape(6.dp))
-                                        .background(statusColor.copy(alpha = 0.18f))
-                                        .padding(horizontal = 8.dp, vertical = 3.dp)
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(color = MaterialTheme.colorScheme.background)
+                        .border(
+                            width = 1.dp,
+                            color = Color(0xFF414141),
+                            shape = RoundedCornerShape(20.dp)
+                        )
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
                 ) {
-                    Text(statusLabel, color = statusColor, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                    Box(
+                        modifier = Modifier
+                            .size(6.dp)
+                            .clip(CircleShape)
+                            .background(statusColor)
+                    )
+                    Text(
+                        text = statusLabel,
+                        color = statusColor,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(20.dp))
+
+            Row(
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (serviceIconRes != null) {
+                        Icon(
+                            painter = painterResource(id = serviceIconRes),
+                            contentDescription = null,
+                            tint = serviceColor,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.DirectionsCar,
+                            contentDescription = null,
+                            tint = serviceColor,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = serviceDisplay,
+                        color = serviceColor,
+                        fontSize = 14.sp,
+                    )
+                }
+
+                Text(
+                    text = "S/ ${total.toInt()}",
+                    color = MaterialTheme.colorScheme.onBackground,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (order.status != OrderStatus.Anulado) {
+                Button(
+                    onClick = onActionClick,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = buttonColor),
+                    shape = RoundedCornerShape(20.dp),
+                    contentPadding = PaddingValues(vertical = 4.dp)
+                ) {
+                    Text(
+                        text = buttonText,
+                        color = Color.White,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium
+                    )
                 }
             }
         }
@@ -144,114 +200,7 @@ fun ActiveOrderCard(order: Order, modifier: Modifier = Modifier) {
 
 @Composable
 fun OrderCard(order: Order, modifier: Modifier = Modifier) {
-    ActiveOrderCard(order = order, modifier = modifier)
-}
-
-@Composable
-fun OrderListCard(order: Order, modifier: Modifier = Modifier) {
-    val vehicleDisplayName = order.vehicle?.let { v -> "${v.brand} ${v.model ?: ""}".trim() } ?: "Vehículo"
-    val plate = order.vehicle?.plate ?: order.orderNumber
-    val firstItem = order.items.firstOrNull()
-    val serviceName = firstItem?.serviceName ?: "Servicio"
-    val timeAgoText = timeAgo(order.createdAt.toString())
-
-    val serviceColor = firstItem?.serviceColor?.let { hex ->
-        runCatching { Color(hex.toColorInt()) }.getOrNull()
-    } ?: OnSurfaceVariantDark
-    val serviceIconRes = serviceIconDrawable(firstItem?.serviceIcon)
-
-    val (statusLabel, statusColor) = when (order.status) {
-        OrderStatus.EnProceso  -> "EN PROCESO" to StatusInProgress
-        OrderStatus.Lavando    -> "LAVANDO"    to StatusWashing
-        OrderStatus.Terminado  -> "TERMINADO"  to StatusPending
-        OrderStatus.Entregado  -> "ENTREGADO"  to StatusDone
-        OrderStatus.Anulado    -> "ANULADO"    to StatusCancelled
-    }
-
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(SurfaceCardDark)
-            .padding(horizontal = 16.dp, vertical = 14.dp)
-    ) {
-        Column {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = vehicleDisplayName,
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp,
-                    modifier = Modifier.weight(1f)
-                )
-                Text(
-                    text = timeAgoText,
-                    color = OnSurfaceVariantDark,
-                    fontSize = 12.sp
-                )
-            }
-
-            Spacer(Modifier.height(4.dp))
-
-            Text(
-                text = plate,
-                color = OnSurfaceVariantDark,
-                fontSize = 12.sp
-            )
-
-            Spacer(Modifier.height(10.dp))
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (serviceIconRes != null) {
-                    Icon(
-                        painter = painterResource(id = serviceIconRes),
-                        contentDescription = null,
-                        tint = serviceColor,
-                        modifier = Modifier.size(16.dp)
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Default.DirectionsCar,
-                        contentDescription = null,
-                        tint = serviceColor,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    text = serviceName,
-                    color = serviceColor,
-                    fontSize = 13.sp,
-                    modifier = Modifier.weight(1f)
-                )
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(statusColor)
-                        .padding(horizontal = 10.dp, vertical = 4.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-//                        Box(
-//                            modifier = Modifier
-//                                .size(6.dp)
-//                                .clip(CircleShape)
-//                                .background(statusColor)
-//                        )
-//                        Spacer(Modifier.width(5.dp))
-                        Text(
-                            text = statusLabel,
-                            color = MaterialTheme.colorScheme.onBackground,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-            }
-        }
-    }
+    OrderListCard(order = order, modifier = modifier)
 }
 
 fun serviceIconDrawable(icon: String?): Int? = when (icon) {
@@ -269,20 +218,4 @@ fun serviceIconDrawable(icon: String?): Int? = when (icon) {
     "flame"       -> R.drawable.fire_flame
     "bright-star" -> R.drawable.bright_star
     else          -> null
-}
-
-private fun timeAgo(createdAt: String?): String {
-    if (createdAt == null) return ""
-    return try {
-        val created = OffsetDateTime.parse(createdAt)
-        val now = OffsetDateTime.now()
-        val minutes = ChronoUnit.MINUTES.between(created, now)
-        when {
-            minutes < 60  -> "${minutes}m ago"
-            minutes < 1440 -> "${minutes / 60}h ago"
-            else           -> "${minutes / 1440}d ago"
-        }
-    } catch (e: Exception) {
-        ""
-    }
 }

@@ -60,6 +60,7 @@ import com.example.carwash.ui.theme.OrangePrimary
 import com.example.carwash.ui.theme.SurfaceCardDark
 import com.example.carwash.ui.theme.SurfaceDark
 import kotlinx.coroutines.launch
+import androidx.core.graphics.toColorInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -192,6 +193,10 @@ fun ServicesScreen(navController: NavController, viewModel: AddOrderViewModel) {
 
     // ── Services bottom sheet ────────────────────────────────────────────────
     if (showServicesSheet) {
+        val grouped = remember(uiState.availableServices) {
+            uiState.availableServices.groupBy { it.category?.name ?: "Otros" }
+        }
+
         ModalBottomSheet(
             onDismissRequest = { showServicesSheet = false },
             sheetState = sheetState,
@@ -206,56 +211,78 @@ fun ServicesScreen(navController: NavController, viewModel: AddOrderViewModel) {
             )
             HorizontalDivider(color = Color.White.copy(alpha = 0.06f), thickness = 0.5.dp)
             LazyColumn(modifier = Modifier.weight(1f)) {
-                items(uiState.availableServices) { service ->
-                    val isSelected = tempSelected.contains(service)
-                    val iconRes = serviceIconDrawable(service.icon)
-                    val serviceColor = service.color?.let { hex ->
-                        runCatching { Color(android.graphics.Color.parseColor(hex)) }.getOrNull()
-                    } ?: OnSurfaceVariantDark
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                tempSelected = if (isSelected) tempSelected - service else tempSelected + service
-                            }
-                            .padding(horizontal = 20.dp, vertical = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        if (iconRes != null) {
-                            Icon(
-                                painter = painterResource(id = iconRes),
-                                contentDescription = null,
-                                tint = serviceColor,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        } else {
-                            Icon(
-                                imageVector = Icons.Default.Build,
-                                contentDescription = null,
-                                tint = OnSurfaceVariantDark,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-                        Spacer(Modifier.width(12.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(service.name, color = serviceColor, fontSize = 14.sp)
-                            service.description?.let {
-                                Text(it, color = OnSurfaceVariantDark, fontSize = 12.sp)
-                            }
-                        }
-                        Checkbox(
-                            checked = isSelected,
-                            onCheckedChange = {
-                                tempSelected = if (isSelected) tempSelected - service else tempSelected + service
-                            },
-                            colors = CheckboxDefaults.colors(
-                                checkedColor = OrangePrimary,
-                                uncheckedColor = OnSurfaceVariantDark
-                            )
+                grouped.forEach { (categoryName, services) ->
+                    item(key = "header_$categoryName") {
+                        Text(
+                            categoryName.uppercase(),
+                            color = OnSurfaceVariantDark,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            letterSpacing = 0.8.sp,
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp)
                         )
                     }
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.06f), thickness = 0.5.dp)
+                    items(services, key = { it.id }) { service ->
+                        val isSelected = tempSelected.contains(service)
+                        val iconRes = serviceIconDrawable(service.icon)
+                        val serviceColor = service.color?.let { hex ->
+                            runCatching { Color(hex.toColorInt()) }.getOrNull()
+                        } ?: OnSurfaceVariantDark
+                        val price = uiState.resolvedPrices[service.id]
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    tempSelected = if (isSelected) tempSelected - service else tempSelected + service
+                                }
+                                .padding(horizontal = 20.dp, vertical = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (iconRes != null) {
+                                Icon(
+                                    painter = painterResource(id = iconRes),
+                                    contentDescription = null,
+                                    tint = serviceColor,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.Build,
+                                    contentDescription = null,
+                                    tint = OnSurfaceVariantDark,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                            Spacer(Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(service.name, color = serviceColor, fontSize = 14.sp)
+                                service.description?.let {
+                                    Text(it, color = OnSurfaceVariantDark, fontSize = 12.sp)
+                                }
+                            }
+                            if (price != null && price > 0.0) {
+                                Text(
+                                    "S/ ${String.format("%.2f", price)}",
+                                    color = Color.White,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    modifier = Modifier.padding(end = 4.dp)
+                                )
+                            }
+                            Checkbox(
+                                checked = isSelected,
+                                onCheckedChange = {
+                                    tempSelected = if (isSelected) tempSelected - service else tempSelected + service
+                                },
+                                colors = CheckboxDefaults.colors(
+                                    checkedColor = OrangePrimary,
+                                    uncheckedColor = OnSurfaceVariantDark
+                                )
+                            )
+                        }
+                        HorizontalDivider(color = Color.White.copy(alpha = 0.06f), thickness = 0.5.dp)
+                    }
                 }
             }
             Button(
@@ -283,7 +310,7 @@ fun ServicesScreen(navController: NavController, viewModel: AddOrderViewModel) {
 private fun SelectedServiceRow(service: Service, onRemove: () -> Unit) {
     val iconRes = serviceIconDrawable(service.icon)
     val serviceColor = service.color?.let { hex ->
-        runCatching { Color(android.graphics.Color.parseColor(hex)) }.getOrNull()
+        runCatching { Color(hex.toColorInt()) }.getOrNull()
     } ?: OnSurfaceVariantDark
 
     Row(
