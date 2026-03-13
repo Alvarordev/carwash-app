@@ -88,6 +88,8 @@ The AddOrder wizard shares a single `AddOrderViewModel` scoped to the parent nav
 
 **Theme**: Dark-first Material 3. Colors defined in `ui/theme/Color.kt`. Icons use `Icons.Filled` / `Icons.Outlined` from `material-icons-extended`.
 
+**Timezone display**: Supabase stores all timestamps as UTC. Domain models use `OffsetDateTime`. When displaying times in the UI, always convert with `.atZoneSameInstant(ZoneId.of("America/Lima"))` before formatting — otherwise times show UTC (+5h offset). The `observeOrdersByDate` filter in `OrderRepositoryImpl` already does this correctly for queries.
+
 ## Supabase Backend
 
 Project ID: `mjocggnioqptesmjotpx` (us-east-1)

@@ -85,6 +85,7 @@ import com.example.carwash.domain.model.OrderStaff
 import com.example.carwash.domain.model.OrderStatus
 import com.example.carwash.domain.model.OrderStatusHistory
 import java.time.OffsetDateTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import com.example.carwash.domain.model.Service
 import com.example.carwash.domain.model.StaffMember
@@ -596,6 +597,7 @@ private fun StatusTimeline(
         else -> null
     }
 
+    val limaZone = remember { ZoneId.of("America/Lima") }
     val dateFormatter = remember { DateTimeFormatter.ofPattern("dd/MM/yy") }
     val timeFormatter = remember { DateTimeFormatter.ofPattern("HH:mm") }
 
@@ -659,14 +661,15 @@ private fun StatusTimeline(
 
                     // Date + time
                     if (historyEntry != null) {
+                        val localCreatedAt = historyEntry.createdAt.atZoneSameInstant(limaZone)
                         Column(horizontalAlignment = Alignment.End) {
                             Text(
-                                text = historyEntry.createdAt.format(dateFormatter),
+                                text = localCreatedAt.format(dateFormatter),
                                 color = OnSurfaceVariantDark,
                                 fontSize = 12.sp
                             )
                             Text(
-                                text = historyEntry.createdAt.format(timeFormatter),
+                                text = localCreatedAt.format(timeFormatter),
                                 color = OnSurfaceVariantDark.copy(alpha = 0.7f),
                                 fontSize = 11.sp
                             )
