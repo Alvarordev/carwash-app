@@ -286,13 +286,32 @@ constructor(
         orderDataSource.updateTotals(orderId, newSubtotal, 0.0, newSubtotal)
     }
 
+    override suspend fun getOrdersByDateRange(
+        startDate: LocalDate,
+        endDate: LocalDate
+    ): Result<List<Order>> = runCatching {
+        val zoneId = ZoneId.of("America/Lima")
+        val startIso = startDate.atStartOfDay(zoneId).toOffsetDateTime().toString()
+        val endIso = endDate.atTime(LocalTime.of(23, 59, 59)).atZone(zoneId).toOffsetDateTime().toString()
+        orderDataSource.getAllForPeriod(startIso, endIso).map { it.toDomain() }
+    }
+
     override fun observeOrdersByDate(date: LocalDate): Flow<Result<List<Order>>> {
         val zoneId = ZoneId.of("America/Lima")
+        val today = LocalDate.now(zoneId)
         val startIso = date.atStartOfDay(zoneId).toOffsetDateTime().toString()
         val endIso = date.atTime(LocalTime.of(23, 59, 59)).atZone(zoneId).toOffsetDateTime().toString()
-        return orderDataSource.observeOrdersByPeriod(startIso, endIso)
-            .map { dtos -> Result.success(dtos.map { it.toDomain() }) }
-            .catch { e -> emit(Result.failure(e)) }
+        return if (date == today) {
+            orderDataSource.observeOrdersByPeriod(startIso, endIso)
+                .map { dtos -> Result.success(dtos.map { it.toDomain() }) }
+                .catch { e -> emit(Result.failure(e)) }
+        } else {
+            flow {
+                emit(Result.success(
+                    orderDataSource.getAllForPeriod(startIso, endIso).map { it.toDomain() }
+                ))
+            }.catch { e -> emit(Result.failure(e)) }
+        }
     }
 
     override fun observeOrdersByPeriod(period: OrderPeriod): Flow<Result<List<Order>>> {

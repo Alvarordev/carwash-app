@@ -26,10 +26,6 @@ class OrderRemoteDataSource @Inject constructor(
     private val client: SupabaseClient
 ) {
     suspend fun getAll(): List<OrderWithDetailsDto> {
-        val zoneId = ZoneId.of("America/Lima")
-        val today = LocalDate.now(zoneId)
-        val startOfDay = today.atStartOfDay(zoneId).toOffsetDateTime().toString()
-        val endOfDay = today.atTime(23, 59, 59).atZone(zoneId).toOffsetDateTime().toString()
 
         return client.postgrest["orders"]
             .select(
@@ -44,10 +40,6 @@ class OrderRemoteDataSource @Inject constructor(
                 """.trimIndent()
                 )
             ) {
-                filter {
-                    gte("created_at", startOfDay)
-                    lte("created_at", endOfDay)
-                }
                 order("created_at", Order.DESCENDING)
             }
             .decodeList()

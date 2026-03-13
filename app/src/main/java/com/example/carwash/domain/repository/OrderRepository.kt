@@ -27,6 +27,7 @@ interface OrderRepository {
     suspend fun getOrdersByPeriod(period: OrderPeriod): Result<List<Order>>
     fun observeOrdersByPeriod(period: OrderPeriod): Flow<Result<List<Order>>>
     fun observeOrdersByDate(date: LocalDate): Flow<Result<List<Order>>>
+    suspend fun getOrdersByDateRange(startDate: LocalDate, endDate: LocalDate): Result<List<Order>>
     suspend fun updateOrderStaff(
         orderId: String,
         toAdd: List<String>,

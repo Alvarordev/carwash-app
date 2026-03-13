@@ -56,7 +56,7 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector?
     object OrderDetail : Screen("order_details/{orderId}", "Orden")
 }
 
-private val tabRoutes = listOf(Screen.Dashboard.route, Screen.Orders.route, Screen.Profile.route)
+private val tabRoutes = listOf(Screen.Dashboard.route, Screen.Profile.route)
 private const val TAB_ANIM_DURATION = 300
 
 @Composable
@@ -65,7 +65,7 @@ fun MainScreen(onAddOrder: () -> Unit) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    val navigationItems = listOf(Screen.Dashboard, Screen.Orders, Screen.Profile)
+    val navigationItems = listOf(Screen.Dashboard, Screen.Profile)
     val showBottomBar = currentRoute != Screen.OrderDetail.route
 
     Scaffold(

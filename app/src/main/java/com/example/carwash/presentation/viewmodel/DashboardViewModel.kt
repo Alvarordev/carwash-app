@@ -16,14 +16,12 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -70,7 +68,6 @@ data class DashboardUiState(
         get() = selectedDate == LocalDate.now(ZoneId.of("America/Lima"))
 }
 
-@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
     private val orderRepository: OrderRepository,
@@ -78,51 +75,73 @@ class DashboardViewModel @Inject constructor(
     private val companySession: CompanySession
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(DashboardUiState())
-    val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
+    private val limaZone = ZoneId.of("America/Lima")
+    private val today = LocalDate.now(limaZone)
 
-    private val _selectedDate = MutableStateFlow(
-        LocalDate.now(ZoneId.of("America/Lima"))
-    )
+    private val _baseState = MutableStateFlow(DashboardUiState())
+    private val _allWeekOrders = MutableStateFlow<List<Order>>(emptyList())
+
+    val uiState: StateFlow<DashboardUiState> = combine(
+        _baseState,
+        _allWeekOrders
+    ) { base, allOrders ->
+        val filtered = allOrders.filter { order ->
+            order.createdAt.atZoneSameInstant(limaZone).toLocalDate() == base.selectedDate
+        }
+        base.copy(orders = filtered)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), DashboardUiState())
 
     init {
-        _uiState.update { it.copy(staffName = companySession.staffName ?: "Usuario") }
+        _baseState.update { it.copy(staffName = companySession.staffName ?: "Usuario") }
 
-        _selectedDate
-            .flatMapLatest { date -> orderRepository.observeOrdersByDate(date) }
-            .onEach { result ->
-                result
-                    .onSuccess { orders ->
-                        _uiState.update {
-                            it.copy(orders = orders, isLoading = false, errorMessage = null)
-                        }
-                    }
-                    .onFailure { err ->
-                        _uiState.update {
-                            it.copy(isLoading = false, errorMessage = err.message ?: "Error")
-                        }
-                    }
-            }
-            .catch { err ->
-                _uiState.update {
-                    it.copy(isLoading = false, errorMessage = err.message ?: "Error")
+        // 1. Fetch all orders for the last 7 days in one call
+        viewModelScope.launch {
+            val startDate = today.minusDays(6)
+            orderRepository.getOrdersByDateRange(startDate, today)
+                .onSuccess { orders ->
+                    _allWeekOrders.value = orders
+                    _baseState.update { it.copy(isLoading = false, errorMessage = null) }
                 }
-            }
-            .launchIn(viewModelScope)
+                .onFailure { err ->
+                    _baseState.update { it.copy(isLoading = false, errorMessage = err.message ?: "Error") }
+                }
+        }
+
+        // 2. Realtime subscription for today — merge live updates into the cache
+        viewModelScope.launch {
+            orderRepository.observeOrdersByDate(today)
+                .catch { err ->
+                    _baseState.update { it.copy(isLoading = false, errorMessage = err.message ?: "Error") }
+                }
+                .collect { result ->
+                    result
+                        .onSuccess { todayOrders ->
+                            _allWeekOrders.update { current ->
+                                val pastOrders = current.filter { order ->
+                                    order.createdAt.atZoneSameInstant(limaZone).toLocalDate() != today
+                                }
+                                pastOrders + todayOrders
+                            }
+                            _baseState.update { it.copy(isLoading = false, errorMessage = null) }
+                        }
+                        .onFailure { err ->
+                            _baseState.update { it.copy(isLoading = false, errorMessage = err.message ?: "Error") }
+                        }
+                }
+        }
 
         viewModelScope.launch {
             staffRepository.getActiveStaff()
-                .onSuccess { staff -> _uiState.update { it.copy(availableStaff = staff) } }
+                .onSuccess { staff -> _baseState.update { it.copy(availableStaff = staff) } }
         }
         viewModelScope.launch {
             orderRepository.getPaymentMethods()
-                .onSuccess { methods -> _uiState.update { it.copy(paymentMethods = methods) } }
+                .onSuccess { methods -> _baseState.update { it.copy(paymentMethods = methods) } }
         }
     }
 
     fun selectDate(date: LocalDate) {
-        _uiState.update { it.copy(selectedDate = date, isLoading = true) }
-        _selectedDate.value = date
+        _baseState.update { it.copy(selectedDate = date) }
     }
 
     fun onCardAction(order: Order) {
@@ -132,15 +151,15 @@ class DashboardViewModel @Inject constructor(
             OrderStatus.Terminado -> OrderSheetType.Delivery(order)
             else -> return
         }
-        _uiState.update { it.copy(sheetType = sheetType) }
+        _baseState.update { it.copy(sheetType = sheetType) }
     }
 
     fun dismissSheet() {
-        _uiState.update { it.copy(sheetType = OrderSheetType.None, isSheetSubmitting = false) }
+        _baseState.update { it.copy(sheetType = OrderSheetType.None, isSheetSubmitting = false) }
     }
 
     fun submitStaffAndAdvance(order: Order, selectedStaffIds: List<String>) {
-        _uiState.update { it.copy(isSheetSubmitting = true) }
+        _baseState.update { it.copy(isSheetSubmitting = true) }
         viewModelScope.launch {
             if (selectedStaffIds.isNotEmpty()) {
                 orderRepository.updateOrderStaff(order.id, selectedStaffIds, emptyList())
@@ -155,7 +174,7 @@ class DashboardViewModel @Inject constructor(
     }
 
     fun submitQualityAndAdvance(order: Order) {
-        _uiState.update { it.copy(isSheetSubmitting = true) }
+        _baseState.update { it.copy(isSheetSubmitting = true) }
         viewModelScope.launch {
             orderRepository.updateOrderStatus(
                 orderId = order.id,
@@ -167,7 +186,7 @@ class DashboardViewModel @Inject constructor(
     }
 
     fun submitDelivery(order: Order, paymentMethod: String, photoUris: List<Uri>) {
-        _uiState.update { it.copy(isSheetSubmitting = true) }
+        _baseState.update { it.copy(isSheetSubmitting = true) }
         viewModelScope.launch {
             orderRepository.deliverOrder(order.id, paymentMethod, photoUris)
             dismissSheet()
