@@ -14,33 +14,22 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -49,9 +38,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.carwash.domain.model.Order
 import com.example.carwash.domain.model.OrderStatus
-import com.example.carwash.domain.model.StaffMember
+import com.example.carwash.presentation.components.ChecklistBottomSheet
+import com.example.carwash.presentation.components.ChecklistItem
 import com.example.carwash.presentation.components.DeliveryBottomSheet
 import com.example.carwash.presentation.components.OrderListCard
 import com.example.carwash.presentation.viewmodel.DashboardViewModel
@@ -60,7 +49,6 @@ import com.example.carwash.ui.theme.BackgroundDark
 import com.example.carwash.ui.theme.OnSurfaceVariantDark
 import com.example.carwash.ui.theme.OrangePrimary
 import com.example.carwash.ui.theme.SurfaceCardDark
-import com.example.carwash.ui.theme.SurfaceDark
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.ZoneId
@@ -68,7 +56,6 @@ import java.time.ZoneId
 private val DayPillSelected = Color(0xFF2979FF)
 private val BorderColor = Color(0xFF414141)
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
     onAddOrder: () -> Unit,
@@ -203,18 +190,43 @@ fun DashboardScreen(
 
     // Bottom sheets
     when (val sheet = uiState.sheetType) {
-        is OrderSheetType.StaffSelection -> StaffSelectionSheet(
-            order = sheet.order,
-            availableStaff = uiState.availableStaff,
-            isSubmitting = uiState.isSheetSubmitting,
-            onDismiss = { viewModel.dismissSheet() },
-            onConfirm = { selectedIds -> viewModel.submitStaffAndAdvance(sheet.order, selectedIds) }
-        )
-        is OrderSheetType.QualityChecklist -> QualityChecklistSheet(
-            isSubmitting = uiState.isSheetSubmitting,
-            onDismiss = { viewModel.dismissSheet() },
-            onConfirm = { viewModel.submitQualityAndAdvance(sheet.order) }
-        )
+        is OrderSheetType.StaffSelection -> {
+            val assignedStaffIds = sheet.order.staff.mapNotNull { it.staffId }.toSet()
+            val unassignedStaff = uiState.availableStaff.filter { it.id !in assignedStaffIds }
+
+            ChecklistBottomSheet(
+                title = "¿Quién realizará el lavado?",
+                items = unassignedStaff.map { ChecklistItem(id = it.id, label = it.fullName) },
+                emptyMessage = "Todo el personal activo ya está asignado",
+                buttonText = "Iniciar Lavado",
+                buttonEnabled = { it.isNotEmpty() },
+                isSubmitting = uiState.isSheetSubmitting,
+                onDismiss = { viewModel.dismissSheet() },
+                onConfirm = { selectedIds -> viewModel.submitStaffAndAdvance(sheet.order, selectedIds.toList()) }
+            )
+        }
+        is OrderSheetType.QualityChecklist -> {
+            val checklistItems = listOf(
+                "Llantas y Aros Limpios",
+                "Vidrios sin Manchas",
+                "Filos de Puertas",
+                "Secado sin Marcas",
+                "Aspirado Completo",
+                "Tablero, consola y puertas",
+                "Encerado sin manchas",
+                "Espejos secos"
+            )
+
+            ChecklistBottomSheet(
+                title = "Checklist de Calidad",
+                items = checklistItems.map { ChecklistItem(id = it, label = it) },
+                buttonText = "Marcar como Terminado",
+                buttonEnabled = { it.size == checklistItems.size },
+                isSubmitting = uiState.isSheetSubmitting,
+                onDismiss = { viewModel.dismissSheet() },
+                onConfirm = { viewModel.submitQualityAndAdvance(sheet.order) }
+            )
+        }
         is OrderSheetType.Delivery -> DeliveryBottomSheet(
             paymentMethods = uiState.paymentMethods,
             isDelivering = uiState.isSheetSubmitting,
@@ -222,178 +234,6 @@ fun DashboardScreen(
             onConfirm = { method, photos -> viewModel.submitDelivery(sheet.order, method, photos) }
         )
         is OrderSheetType.None -> {}
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun StaffSelectionSheet(
-    order: Order,
-    availableStaff: List<StaffMember>,
-    isSubmitting: Boolean,
-    onDismiss: () -> Unit,
-    onConfirm: (List<String>) -> Unit
-) {
-    val assignedStaffIds = order.staff.mapNotNull { it.staffId }.toSet()
-    val unassignedStaff = availableStaff.filter { it.id !in assignedStaffIds }
-    var selectedIds by remember { mutableStateOf<Set<String>>(emptySet()) }
-
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = SurfaceDark
-    ) {
-        Column(modifier = Modifier.padding(horizontal = 20.dp)) {
-            Text(
-                "¿Quién realizará el lavado?",
-                color = Color.White,
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
-                modifier = Modifier.padding(bottom = 12.dp)
-            )
-            if (unassignedStaff.isEmpty()) {
-                Text(
-                    "Todo el personal activo ya está asignado",
-                    color = OnSurfaceVariantDark,
-                    fontSize = 14.sp,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-            } else {
-                unassignedStaff.forEach { member ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                selectedIds = if (member.id in selectedIds) {
-                                    selectedIds - member.id
-                                } else {
-                                    selectedIds + member.id
-                                }
-                            }
-                            .padding(vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Checkbox(
-                            checked = member.id in selectedIds,
-                            onCheckedChange = {
-                                selectedIds = if (member.id in selectedIds) {
-                                    selectedIds - member.id
-                                } else {
-                                    selectedIds + member.id
-                                }
-                            },
-                            colors = CheckboxDefaults.colors(
-                                checkedColor = OrangePrimary,
-                                uncheckedColor = OnSurfaceVariantDark
-                            )
-                        )
-                        Text(
-                            text = member.fullName,
-                            color = Color.White,
-                            fontSize = 14.sp,
-                            modifier = Modifier.padding(start = 8.dp)
-                        )
-                    }
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.06f), thickness = 0.5.dp)
-                }
-            }
-            Spacer(Modifier.height(16.dp))
-            Button(
-                onClick = { onConfirm(selectedIds.toList()) },
-                enabled = selectedIds.isNotEmpty() && !isSubmitting,
-                modifier = Modifier.fillMaxWidth().height(52.dp),
-                shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary)
-            ) {
-                if (isSubmitting) {
-                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                } else {
-                    Text("Iniciar Lavado", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                }
-            }
-            Spacer(Modifier.height(32.dp))
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun QualityChecklistSheet(
-    isSubmitting: Boolean,
-    onDismiss: () -> Unit,
-    onConfirm: () -> Unit
-) {
-    val checklistItems = listOf(
-        "Llantas y Aros Limpios",
-        "Vidrios sin Manchas",
-        "Filos de Puertas",
-        "Secado sin Marcas",
-        "Aspirado Completo",
-        "Tablero, consola y puertas",
-        "Encerado sin manchas",
-        "Espejos secos"
-    )
-    var checkedItems by remember { mutableStateOf<Set<String>>(emptySet()) }
-    val allChecked = checkedItems.size == checklistItems.size
-
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = SurfaceDark
-    ) {
-        Column(modifier = Modifier.padding(horizontal = 20.dp)) {
-            Text(
-                "Checklist de Calidad",
-                color = Color.White,
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
-                modifier = Modifier.padding(bottom = 12.dp)
-            )
-            checklistItems.forEach { item ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            checkedItems = if (item in checkedItems) checkedItems - item else checkedItems + item
-                        }
-                        .padding(vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Checkbox(
-                        checked = item in checkedItems,
-                        onCheckedChange = {
-                            checkedItems = if (item in checkedItems) checkedItems - item else checkedItems + item
-                        },
-                        colors = CheckboxDefaults.colors(
-                            checkedColor = OrangePrimary,
-                            uncheckedColor = OnSurfaceVariantDark
-                        )
-                    )
-                    Text(
-                        text = item,
-                        color = Color.White,
-                        fontSize = 14.sp,
-                        modifier = Modifier.padding(start = 8.dp)
-                    )
-                }
-                HorizontalDivider(color = Color.White.copy(alpha = 0.06f), thickness = 0.5.dp)
-            }
-            Spacer(Modifier.height(16.dp))
-            Button(
-                onClick = onConfirm,
-                enabled = allChecked && !isSubmitting,
-                modifier = Modifier.fillMaxWidth().height(52.dp),
-                shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary)
-            ) {
-                if (isSubmitting) {
-                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                } else {
-                    Text("Marcar como Terminado", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                }
-            }
-            Spacer(Modifier.height(32.dp))
-        }
     }
 }
 
