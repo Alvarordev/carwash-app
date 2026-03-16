@@ -15,7 +15,6 @@ import com.example.carwash.util.toUserMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.LocalDate
 import java.time.ZoneId
-import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -26,6 +25,8 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+
+private const val DATE_RANGE_DAYS = 29
 
 sealed class OrderSheetType {
     object None : OrderSheetType()
@@ -39,7 +40,6 @@ data class DashboardUiState(
     val selectedDate: LocalDate = LocalDate.now(ZoneId.of("America/Lima")),
     val isLoading: Boolean = true,
     val errorMessage: String? = null,
-    val staffName: String = "Usuario",
     val sheetType: OrderSheetType = OrderSheetType.None,
     val availableStaff: List<StaffMember> = emptyList(),
     val paymentMethods: List<PaymentMethod> = emptyList(),
@@ -47,27 +47,6 @@ data class DashboardUiState(
 ) {
     val activeOrders: List<Order>
         get() = orders.filter { it.status != OrderStatus.Anulado }
-
-    val completedCount: Int
-        get() = orders.count { it.status == OrderStatus.Entregado }
-
-    val averageServiceTimeMinutes: Long?
-        get() {
-            val times = orders.mapNotNull { order ->
-                val lavando = order.statusHistory
-                    .firstOrNull { it.status == OrderStatus.Lavando }
-                val terminado = order.statusHistory
-                    .firstOrNull { it.status == OrderStatus.Terminado }
-                    ?: order.statusHistory.firstOrNull { it.status == OrderStatus.Entregado }
-                if (lavando != null && terminado != null) {
-                    ChronoUnit.MINUTES.between(lavando.createdAt, terminado.createdAt)
-                } else null
-            }
-            return if (times.isNotEmpty()) times.average().toLong() else null
-        }
-
-    val isToday: Boolean
-        get() = selectedDate == LocalDate.now(ZoneId.of("America/Lima"))
 }
 
 @HiltViewModel
@@ -81,11 +60,11 @@ class DashboardViewModel @Inject constructor(
     private val today = LocalDate.now(limaZone)
 
     private val _baseState = MutableStateFlow(DashboardUiState())
-    private val _allWeekOrders = MutableStateFlow<List<Order>>(emptyList())
+    private val _allOrders = MutableStateFlow<List<Order>>(emptyList())
 
     val uiState: StateFlow<DashboardUiState> = combine(
         _baseState,
-        _allWeekOrders
+        _allOrders
     ) { base, allOrders ->
         val filtered = allOrders.filter { order ->
             order.createdAt.atZoneSameInstant(limaZone).toLocalDate() == base.selectedDate
@@ -94,15 +73,13 @@ class DashboardViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), DashboardUiState())
 
     init {
-        _baseState.update { it.copy(staffName = companySession.staffName ?: "Usuario") }
-
-        observeWeekCache()
+        observeCache()
 
         viewModelScope.launch {
-            val startDate = today.minusDays(6)
+            val startDate = today.minusDays(DATE_RANGE_DAYS.toLong())
             orderRepository.getOrdersByDateRange(startDate, today)
                 .onSuccess { orders ->
-                    _allWeekOrders.value = orders
+                    _allOrders.value = orders
                     _baseState.update { it.copy(isLoading = false, errorMessage = null) }
                 }
                 .onFailure { err ->
@@ -134,14 +111,14 @@ class DashboardViewModel @Inject constructor(
         }
     }
 
-    private fun observeWeekCache() {
+    private fun observeCache() {
         viewModelScope.launch {
-            val startDate = today.minusDays(6)
-            for (offset in 0..6) {
+            val startDate = today.minusDays(DATE_RANGE_DAYS.toLong())
+            for (offset in 0..DATE_RANGE_DAYS) {
                 val date = startDate.plusDays(offset.toLong())
                 launch {
                     orderRepository.observeCachedOrdersByDate(date).collectLatest { dayOrders ->
-                        _allWeekOrders.update { current ->
+                        _allOrders.update { current ->
                             val withoutDay = current.filter { order ->
                                 order.createdAt.atZoneSameInstant(limaZone).toLocalDate() != date
                             }
@@ -160,7 +137,7 @@ class DashboardViewModel @Inject constructor(
         _baseState.update {
             it.copy(
                 isLoading = false,
-                errorMessage = if (_allWeekOrders.value.isEmpty()) {
+                errorMessage = if (_allOrders.value.isEmpty()) {
                     error.toUserMessage("No pudimos cargar el dashboard. Intenta de nuevo.")
                 } else {
                     null
