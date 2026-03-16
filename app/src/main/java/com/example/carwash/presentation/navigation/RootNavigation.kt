@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -32,10 +33,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavGraphBuilder
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.carwash.domain.model.AppSessionState
 import com.example.carwash.presentation.screens.addorder.CustomerScreen
 import com.example.carwash.presentation.screens.addorder.ObservationsScreen
 import com.example.carwash.presentation.screens.addorder.OrderSummaryScreen
@@ -46,8 +50,8 @@ import com.example.carwash.presentation.screens.auth.LoginScreen
 import com.example.carwash.presentation.viewmodel.AddOrderViewModel
 import com.example.carwash.presentation.viewmodel.AuthViewModel
 import com.example.carwash.util.NetworkMonitor
-import io.github.jan.supabase.auth.status.SessionStatus
 
+const val BOOTSTRAP_ROUTE = "bootstrap"
 const val MAIN_ROUTE = "main"
 const val ADD_ORDER_GRAPH_ROUTE = "add_order_graph"
 const val AUTH_GRAPH_ROUTE = "auth_graph"
@@ -58,43 +62,67 @@ fun RootNavigation(
     authViewModel: AuthViewModel = hiltViewModel()
 ) {
     val rootNavController = rememberNavController()
-    val sessionStatus by authViewModel.sessionStatus.collectAsState()
+    val appSessionState by authViewModel.appSessionState.collectAsState()
     val isOnline by networkMonitor.isOnline.collectAsState()
+    val currentRoute = rootNavController.currentBackStackEntryAsState().value?.destination?.route
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        if (sessionStatus is SessionStatus.Initializing) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
-        } else {
-            val startRoute = if (sessionStatus is SessionStatus.Authenticated) {
-                MAIN_ROUTE
-            } else {
-                AUTH_GRAPH_ROUTE
-            }
-
-            NavHost(navController = rootNavController, startDestination = startRoute) {
-                navigation(route = AUTH_GRAPH_ROUTE, startDestination = Screen.Login.route) {
-                    composable(Screen.Login.route) {
-                        LoginScreen(viewModel = authViewModel)
+    LaunchedEffect(appSessionState) {
+        when (appSessionState) {
+            is AppSessionState.Restoring -> {
+                if (currentRoute != BOOTSTRAP_ROUTE) {
+                    rootNavController.navigate(BOOTSTRAP_ROUTE) {
+                        popUpTo(rootNavController.graph.findStartDestination().id) { inclusive = true }
+                        launchSingleTop = true
                     }
                 }
+            }
 
-                composable(MAIN_ROUTE) {
-                    MainScreen(onAddOrder = { rootNavController.navigate(ADD_ORDER_GRAPH_ROUTE) })
+            is AppSessionState.Authenticated -> {
+                if (currentRoute != MAIN_ROUTE) {
+                    rootNavController.navigate(MAIN_ROUTE) {
+                        popUpTo(rootNavController.graph.findStartDestination().id) { inclusive = true }
+                        launchSingleTop = true
+                    }
                 }
+            }
 
-                navigation(startDestination = Screen.AddOrderPhoto.route, route = ADD_ORDER_GRAPH_ROUTE) {
-                    addOrderGraph(
-                        navController = rootNavController,
-                        onOrderCreated = {
-                            rootNavController.navigate(MAIN_ROUTE) {
-                                popUpTo(MAIN_ROUTE) { inclusive = false }
-                                launchSingleTop = true
-                            }
+            is AppSessionState.Unauthenticated -> {
+                if (currentRoute != AUTH_GRAPH_ROUTE && currentRoute != Screen.Login.route) {
+                    rootNavController.navigate(AUTH_GRAPH_ROUTE) {
+                        popUpTo(rootNavController.graph.findStartDestination().id) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
+            }
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        NavHost(navController = rootNavController, startDestination = BOOTSTRAP_ROUTE) {
+            composable(BOOTSTRAP_ROUTE) {
+                SessionBootstrapScreen()
+            }
+
+            navigation(route = AUTH_GRAPH_ROUTE, startDestination = Screen.Login.route) {
+                composable(Screen.Login.route) {
+                    LoginScreen(viewModel = authViewModel)
+                }
+            }
+
+            composable(MAIN_ROUTE) {
+                MainScreen(onAddOrder = { rootNavController.navigate(ADD_ORDER_GRAPH_ROUTE) })
+            }
+
+            navigation(startDestination = Screen.AddOrderPhoto.route, route = ADD_ORDER_GRAPH_ROUTE) {
+                addOrderGraph(
+                    navController = rootNavController,
+                    onOrderCreated = {
+                        rootNavController.navigate(MAIN_ROUTE) {
+                            popUpTo(MAIN_ROUTE) { inclusive = false }
+                            launchSingleTop = true
                         }
-                    )
-                }
+                    }
+                )
             }
         }
 
@@ -128,6 +156,13 @@ fun RootNavigation(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun SessionBootstrapScreen() {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        CircularProgressIndicator()
     }
 }
 

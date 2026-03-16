@@ -261,6 +261,13 @@ constructor(
         viewModelScope.launch {
             val state = _uiState.value
 
+            if (companySession.staffMemberId == null) {
+                _uiState.update {
+                    it.copy(error = "Estamos terminando de sincronizar tu sesión. Intenta de nuevo en unos segundos.")
+                }
+                return@launch
+            }
+
             if (state.selectedServices.isEmpty()) {
                 _uiState.update { it.copy(error = "Selecciona al menos un servicio.") }
                 return@launch

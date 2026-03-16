@@ -31,7 +31,7 @@ class VehicleAnalysisDatasource @Inject constructor(
 
     suspend fun analyze(photos: List<Uri>): Result<VehicleAnalysisResponse> = runCatching {
         val accessToken = supabaseClient.auth.currentSessionOrNull()?.accessToken
-            ?: error("No active session")
+            ?: throw IllegalStateException("La sesión aún se está sincronizando")
 
         val response = httpClient.post("http://178.156.230.233/analyze-vehicle") {
             header(HttpHeaders.Authorization, "Bearer $accessToken")

@@ -17,6 +17,9 @@ class CustomerRepositoryImpl @Inject constructor(
     private val companySession: CompanySession
 ) : CustomerRepository {
 
+    private fun requireCompanyId(): String =
+        companySession.companyId ?: throw IllegalStateException("La sesión aún se está sincronizando")
+
     override fun getCustomers(): Flow<List<Customer>> = flow {
         emit(dataSource.getAll().map { it.toDomain() })
     }
@@ -34,7 +37,7 @@ class CustomerRepositoryImpl @Inject constructor(
     }
 
     override suspend fun addCustomer(customer: Customer): Result<Customer> = runCatching {
-        val companyId = companySession.companyId ?: error("Company session not resolved")
+        val companyId = requireCompanyId()
         dataSource.insert(customer.toInsertDto(companyId)).toDomain()
     }
 

@@ -44,6 +44,9 @@ constructor(
         private val companySession: CompanySession
 ) : OrderRepository {
 
+    private fun requireCompanyId(): String =
+        companySession.companyId ?: throw IllegalStateException("La sesión aún se está sincronizando")
+
     override suspend fun getOrders(): Result<List<Order>> = runCatching {
         orderDataSource.getAll().map { it.toDomain() }
     }
@@ -84,7 +87,7 @@ constructor(
             }
 
     override suspend fun addOrder(order: CreateOrderRequest): Result<Order> = runCatching {
-        val companyId = companySession.companyId ?: error("Company session not resolved")
+        val companyId = requireCompanyId()
         val subtotal = order.items.sumOf { it.subtotal }
         val orderNumber = generateOrderNumber()
 
@@ -175,7 +178,7 @@ constructor(
             changedBy: String?,
             note: String?
     ): Result<Unit> = runCatching {
-        val companyId = companySession.companyId ?: error("Company session not resolved")
+        val companyId = requireCompanyId()
         val statusStr =
                 when (status) {
                     OrderStatus.En_Proceso -> "En Proceso"
@@ -199,7 +202,7 @@ constructor(
             reason: String,
             changedBy: String?
     ): Result<Unit> = runCatching {
-        val companyId = companySession.companyId ?: error("Company session not resolved")
+        val companyId = requireCompanyId()
         orderDataSource.updateStatus(
                 orderId,
                 UpdateOrderStatusDto(status = "Anulado", cancelReason = reason)
@@ -218,7 +221,7 @@ constructor(
             paymentMethod: String,
             paymentStatus: PaymentStatus
     ): Result<Unit> = runCatching {
-        val companyId = companySession.companyId ?: error("Company session not resolved")
+        val companyId = requireCompanyId()
         val paymentStr = paymentStatus.name.lowercase()
         orderDataSource.updatePayment(orderId, paymentStr, paymentMethod)
         if (paymentStatus == PaymentStatus.pagado) {
@@ -245,7 +248,7 @@ constructor(
         toAdd: List<String>,
         toRemove: List<String>
     ): Result<Unit> = runCatching {
-        val companyId = companySession.companyId ?: error("Company session not resolved")
+        val companyId = requireCompanyId()
         toRemove.forEach { orderStaffId -> orderDataSource.removeStaffFromOrder(orderStaffId) }
         val staffDtos = toAdd.mapNotNull { staffId ->
             runCatching { staffDataSource.getById(staffId) }.getOrNull()?.let { staff ->
@@ -266,7 +269,7 @@ constructor(
         toAdd: List<OrderItemRequest>,
         toRemove: List<String>
     ): Result<Unit> = runCatching {
-        val companyId = companySession.companyId ?: error("Company session not resolved")
+        val companyId = requireCompanyId()
         toRemove.forEach { itemId -> orderDataSource.deleteOrderItem(itemId) }
         if (toAdd.isNotEmpty()) {
             orderDataSource.addOrderItems(toAdd.map { item ->
@@ -349,7 +352,7 @@ constructor(
         paymentMethod: String,
         newPhotoUris: List<Uri>
     ): Result<Unit> = runCatching {
-        val companyId = companySession.companyId ?: error("Company session not resolved")
+        val companyId = requireCompanyId()
 
         // 1. Upload new photos if any
         if (newPhotoUris.isNotEmpty()) {

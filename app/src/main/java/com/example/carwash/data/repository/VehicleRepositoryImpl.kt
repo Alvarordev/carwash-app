@@ -16,6 +16,9 @@ class VehicleRepositoryImpl @Inject constructor(
     private val companySession: CompanySession
 ) : VehicleRepository {
 
+    private fun requireCompanyId(): String =
+        companySession.companyId ?: throw IllegalStateException("La sesión aún se está sincronizando")
+
     override fun getVehicles(): Flow<List<Vehicle>> = flow {
         emit(dataSource.getAll().map { it.toDomain() })
     }
@@ -33,7 +36,7 @@ class VehicleRepositoryImpl @Inject constructor(
     }
 
     override suspend fun addVehicle(vehicle: Vehicle, customerId: String?): Result<Vehicle> = runCatching {
-        val companyId = companySession.companyId ?: error("Company session not resolved")
+        val companyId = requireCompanyId()
         val created = dataSource.insert(vehicle.toDto(companyId)).toDomain()
         customerId?.let { dataSource.linkOwner(created.id, it, companyId) }
         created
@@ -44,7 +47,7 @@ class VehicleRepositoryImpl @Inject constructor(
     }
 
     override suspend fun linkOwnerToVehicle(vehicleId: String, customerId: String): Result<Unit> = runCatching {
-        val companyId = companySession.companyId ?: error("Company session not resolved")
+        val companyId = requireCompanyId()
         try {
             dataSource.linkOwner(vehicleId, customerId, companyId)
         } catch (e: Exception) {
@@ -62,8 +65,8 @@ class VehicleRepositoryImpl @Inject constructor(
         model = model,
         vehicleTypeId = vehicleTypeId,
         status = if (status == EntityStatus.Active) "active" else "inactive",
-        createdAt = if (createdAt != null) createdAt.toString() else null,
-        updatedAt = if (updatedAt != null) updatedAt.toString() else null,
+        createdAt = createdAt.toString(),
+        updatedAt = updatedAt.toString(),
         companyId = companyId
     )
 }

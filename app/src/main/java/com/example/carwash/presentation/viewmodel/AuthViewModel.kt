@@ -2,6 +2,7 @@ package com.example.carwash.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.carwash.domain.model.AppSessionState
 import com.example.carwash.domain.repository.AuthRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.jan.supabase.auth.status.SessionStatus
@@ -17,6 +18,13 @@ import javax.inject.Inject
 class AuthViewModel @Inject constructor(
     private val authRepository: AuthRepository
 ) : ViewModel() {
+
+    val appSessionState: StateFlow<AppSessionState> = authRepository.appSessionState
+        .stateIn(
+            scope = viewModelScope,
+            initialValue = AppSessionState.Restoring,
+            started = SharingStarted.WhileSubscribed(5000)
+        )
 
     val sessionStatus: StateFlow<SessionStatus> = authRepository.sessionStatus
         .stateIn(
