@@ -20,23 +20,23 @@ import com.example.carwash.domain.model.*
 import java.time.LocalDate
 import java.time.OffsetDateTime
 
-private fun String.toOffsetDateTime(): OffsetDateTime =
+internal fun String.toOffsetDateTime(): OffsetDateTime =
     OffsetDateTime.parse(this)
 
-private fun String?.toLocalDate(): LocalDate? =
+internal fun String?.toLocalDate(): LocalDate? =
     this?.let { LocalDate.parse(it) }
 
-private fun String.toEntityStatus(): EntityStatus =
+internal fun String.toEntityStatus(): EntityStatus =
     if (this == "active") EntityStatus.Active else EntityStatus.Inactive
 
-private fun String?.toDocumentType(): DocumentType? = when (this) {
+internal fun String?.toDocumentType(): DocumentType? = when (this) {
     "dni" -> DocumentType.Dni
     "carnet_extranjeria" -> DocumentType.CarnetExtranjeria
     "pasaporte" -> DocumentType.Pasaporte
     else -> null
 }
 
-private fun String.toStaffRole(): StaffRole = when (this) {
+internal fun String.toStaffRole(): StaffRole = when (this) {
     "admin" -> StaffRole.Admin
     "washer" -> StaffRole.Washer
     "cashier" -> StaffRole.Cashier
@@ -44,22 +44,22 @@ private fun String.toStaffRole(): StaffRole = when (this) {
     else -> StaffRole.Washer
 }
 
-private fun String?.toStaffRoleOrNull(): StaffRole? = this?.let {
+internal fun String?.toStaffRoleOrNull(): StaffRole? = this?.let {
     runCatching { it.toStaffRole() }.getOrNull()
 }
 
-private fun String.toDiscountType(): DiscountType = when (this) {
+internal fun String.toDiscountType(): DiscountType = when (this) {
     "percentage" -> DiscountType.Percentage
     else -> DiscountType.Fixed
 }
 
-private fun String.toPromotionScope(): PromotionScope = when (this) {
+internal fun String.toPromotionScope(): PromotionScope = when (this) {
     "service" -> PromotionScope.Service
     "vehicleType" -> PromotionScope.VehicleType
     else -> PromotionScope.All
 }
 
-private fun String.toOrderStatus(): OrderStatus = when (this) {
+internal fun String.toOrderStatus(): OrderStatus = when (this) {
     "En Proceso" -> OrderStatus.EnProceso
     "Lavando" -> OrderStatus.Lavando
     "Terminado" -> OrderStatus.Terminado
@@ -69,7 +69,7 @@ private fun String.toOrderStatus(): OrderStatus = when (this) {
     else -> OrderStatus.EnProceso
 }
 
-private fun String?.toPaymentStatus(): PaymentStatus? = when (this) {
+internal fun String?.toPaymentStatus(): PaymentStatus? = when (this) {
     "pendiente" -> PaymentStatus.Pendiente
     "pagado" -> PaymentStatus.Pagado
     "parcial" -> PaymentStatus.Parcial

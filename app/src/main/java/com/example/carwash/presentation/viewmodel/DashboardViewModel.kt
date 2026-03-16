@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -94,7 +95,8 @@ class DashboardViewModel @Inject constructor(
     init {
         _baseState.update { it.copy(staffName = companySession.staffName ?: "Usuario") }
 
-        // 1. Fetch all orders for the last 7 days in one call
+        observeWeekCache()
+
         viewModelScope.launch {
             val startDate = today.minusDays(6)
             orderRepository.getOrdersByDateRange(startDate, today)
@@ -107,7 +109,6 @@ class DashboardViewModel @Inject constructor(
                 }
         }
 
-        // 2. Realtime subscription for today — merge live updates into the cache
         viewModelScope.launch {
             orderRepository.observeOrdersByDate(today)
                 .catch { err ->
@@ -115,15 +116,7 @@ class DashboardViewModel @Inject constructor(
                 }
                 .collect { result ->
                     result
-                        .onSuccess { todayOrders ->
-                            _allWeekOrders.update { current ->
-                                val pastOrders = current.filter { order ->
-                                    order.createdAt.atZoneSameInstant(limaZone).toLocalDate() != today
-                                }
-                                pastOrders + todayOrders
-                            }
-                            _baseState.update { it.copy(isLoading = false, errorMessage = null) }
-                        }
+                        .onSuccess { _baseState.update { it.copy(isLoading = false, errorMessage = null) } }
                         .onFailure { err ->
                             _baseState.update { it.copy(isLoading = false, errorMessage = err.message ?: "Error") }
                         }
@@ -137,6 +130,28 @@ class DashboardViewModel @Inject constructor(
         viewModelScope.launch {
             orderRepository.getPaymentMethods()
                 .onSuccess { methods -> _baseState.update { it.copy(paymentMethods = methods) } }
+        }
+    }
+
+    private fun observeWeekCache() {
+        viewModelScope.launch {
+            val startDate = today.minusDays(6)
+            for (offset in 0..6) {
+                val date = startDate.plusDays(offset.toLong())
+                launch {
+                    orderRepository.observeCachedOrdersByDate(date).collectLatest { dayOrders ->
+                        _allWeekOrders.update { current ->
+                            val withoutDay = current.filter { order ->
+                                order.createdAt.atZoneSameInstant(limaZone).toLocalDate() != date
+                            }
+                            (withoutDay + dayOrders).distinctBy { it.id }
+                        }
+                        if (dayOrders.isNotEmpty()) {
+                            _baseState.update { it.copy(isLoading = false, errorMessage = null) }
+                        }
+                    }
+                }
+            }
         }
     }
 

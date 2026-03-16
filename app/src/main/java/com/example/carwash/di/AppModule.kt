@@ -2,7 +2,10 @@ package com.example.carwash.di
 
 import android.content.ContentResolver
 import android.content.Context
+import androidx.room.Room
 import com.example.carwash.BuildConfig
+import com.example.carwash.data.local.dao.OrderDao
+import com.example.carwash.data.local.db.CarWashDatabase
 import com.example.carwash.data.remote.datasource.*
 import com.example.carwash.data.repository.*
 import com.example.carwash.data.session.CompanySession
@@ -84,6 +87,15 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideDatabase(@ApplicationContext context: Context): CarWashDatabase =
+            Room.databaseBuilder(context, CarWashDatabase::class.java, "carwash.db").build()
+
+    @Provides
+    @Singleton
+    fun provideOrderDao(database: CarWashDatabase): OrderDao = database.orderDao()
+
+    @Provides
+    @Singleton
     fun provideContentResolver(@ApplicationContext context: Context): ContentResolver =
             context.contentResolver
 
@@ -101,10 +113,11 @@ object AppModule {
             staffDataSource: StaffRemoteDataSource,
             photoDataSource: PhotoRemoteDataSource,
             paymentMethodDataSource: PaymentMethodRemoteDataSource,
+            orderDao: OrderDao,
             contentResolver: ContentResolver,
             companySession: CompanySession
     ): OrderRepository =
-            OrderRepositoryImpl(orderDataSource, staffDataSource, photoDataSource, paymentMethodDataSource, contentResolver, companySession)
+            OrderRepositoryImpl(orderDataSource, staffDataSource, photoDataSource, paymentMethodDataSource, orderDao, contentResolver, companySession)
 
     @Provides
     @Singleton

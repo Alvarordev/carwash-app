@@ -16,6 +16,10 @@ interface OrderRepository {
     suspend fun getOrders():  Result<List<Order>>
     fun getActiveOrders(): Flow<List<Order>>
     fun observeTodayOrders(): Flow<Result<List<Order>>>
+    fun observeCachedOrderById(id: String): Flow<Order?>
+    fun observeCachedOrdersByDate(date: LocalDate): Flow<List<Order>>
+    suspend fun refreshOrderById(id: String): Result<Order>
+    suspend fun refreshOrdersByDate(date: LocalDate): Result<List<Order>>
     suspend fun getOrderById(id: String): Result<Order>
     suspend fun getOrdersByStatus(status: OrderStatus): Result<List<Order>>
     suspend fun getOrdersByCustomer(customerId: String): Result<List<Order>>

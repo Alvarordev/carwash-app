@@ -59,6 +59,7 @@ class OrderDetailsViewModel @Inject constructor(
     val uiState: StateFlow<OrderDetailsUiState> = _uiState.asStateFlow()
 
     init {
+        observeCachedOrder()
         load()
         getServicesUseCase()
             .onEach { services ->
@@ -69,10 +70,30 @@ class OrderDetailsViewModel @Inject constructor(
             .launchIn(viewModelScope)
     }
 
+    private fun observeCachedOrder() {
+        getOrderById.observe(orderId)
+            .onEach { cachedOrder ->
+                if (cachedOrder != null) {
+                    _uiState.update {
+                        it.copy(
+                            order = cachedOrder,
+                            pendingStaff = cachedOrder.staff,
+                            pendingItems = cachedOrder.items,
+                            isLoading = false,
+                            errorMessage = null
+                        )
+                    }
+                    cachedOrder.vehicle?.vehicleTypeId?.let { vehicleTypeId -> refreshPrices(vehicleTypeId) }
+                }
+            }
+            .catch { }
+            .launchIn(viewModelScope)
+    }
+
     fun load() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            val orderDeferred = async { getOrderById(orderId) }
+            val orderDeferred = async { getOrderById.refresh(orderId) }
             val staffDeferred = async { staffRepository.getActiveStaff() }
 
             val orderResult = orderDeferred.await()
