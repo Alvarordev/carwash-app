@@ -1,9 +1,8 @@
 package com.example.carwash.presentation.screens.dashboard
 
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -16,7 +15,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -42,7 +40,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -133,7 +130,7 @@ fun DashboardScreen(
                 // Horizontally scrollable date strip
                 LazyRow(
                     state = dateListState,
-                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    contentPadding = PaddingValues(horizontal = 20.dp),
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     itemsIndexed(last30Days, key = { _, date -> date.toEpochDay() }) { _, date ->
@@ -257,6 +254,9 @@ fun DashboardScreen(
     }
 }
 
+private val EaseInOut = CubicBezierEasing(0.4f, 0f, 0.2f, 1f)
+private const val PILL_ANIM_MS = 300
+
 @Composable
 private fun DateItem(
     date: LocalDate,
@@ -264,57 +264,45 @@ private fun DateItem(
     isToday: Boolean,
     onClick: () -> Unit
 ) {
+    val animSpec = tween<Color>(durationMillis = PILL_ANIM_MS, easing = EaseInOut)
     val bgColor by animateColorAsState(
         targetValue = if (isSelected) OrangePrimary else Color.Transparent,
-        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        animationSpec = animSpec,
         label = "dateBg"
     )
-    val textColor = if (isSelected) Color.White else OnSurfaceVariantDark
+    val textColor by animateColorAsState(
+        targetValue = if (isSelected) Color.White else OnSurfaceVariantDark,
+        animationSpec = animSpec,
+        label = "dateTxt"
+    )
 
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
+    Box(
+        contentAlignment = Alignment.Center,
         modifier = Modifier
-            .animateContentSize(
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                    stiffness = Spring.StiffnessMediumLow
-                )
-            )
             .clip(RoundedCornerShape(20.dp))
             .background(bgColor)
             .clickable(onClick = onClick)
-            .padding(horizontal = if (isSelected) 16.dp else 12.dp, vertical = 8.dp)
+            .padding(horizontal = if (isSelected) 14.dp else 10.dp, vertical = 8.dp)
     ) {
-        if (isSelected) {
-            // Selected: show "Lunes, 14"
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
-                text = "${spanishDayFull(date.dayOfWeek)}, ${date.dayOfMonth}",
+                text = if (isSelected) "${spanishDayFull(date.dayOfWeek)}, ${date.dayOfMonth}" else "${date.dayOfMonth}",
                 color = textColor,
                 fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                 maxLines = 1
             )
-        } else {
-            // Unselected: just the number
-            Text(
-                text = "${date.dayOfMonth}",
-                color = textColor,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.width(20.dp)
-            )
-        }
 
-        // Today indicator dot
-        if (isToday && !isSelected) {
-            Spacer(Modifier.height(4.dp))
-            Box(
-                modifier = Modifier
-                    .size(4.dp)
-                    .clip(CircleShape)
-                    .background(OrangePrimary)
-            )
+            // Today indicator dot
+            if (isToday && !isSelected) {
+                Spacer(Modifier.height(3.dp))
+                Box(
+                    modifier = Modifier
+                        .size(4.dp)
+                        .clip(CircleShape)
+                        .background(OrangePrimary)
+                )
+            }
         }
     }
 }
