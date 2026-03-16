@@ -10,6 +10,7 @@ interface ServiceRepository {
     suspend fun getServicesByCategoryId(categoryId: String): Result<List<Service>>
     suspend fun getServicePricing(serviceId: String, vehicleTypeId: String): Result<ServicePricing?>
     suspend fun getAllPricing(): Result<List<ServicePricing>>
+    suspend fun getPricingByVehicleType(vehicleTypeId: String): Result<List<ServicePricing>>
     suspend fun addService(service: Service): Result<Service>
     suspend fun updateService(service: Service): Result<Unit>
 }

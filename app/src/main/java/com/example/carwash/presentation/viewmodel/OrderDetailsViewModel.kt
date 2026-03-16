@@ -12,6 +12,7 @@ import com.example.carwash.domain.model.OrderStatus
 import com.example.carwash.domain.model.Service
 import com.example.carwash.domain.model.StaffMember
 import com.example.carwash.domain.repository.OrderRepository
+import com.example.carwash.domain.repository.ServiceRepository
 import com.example.carwash.domain.repository.StaffRepository
 import com.example.carwash.domain.usecase.GetOrderByIdUseCase
 import com.example.carwash.domain.usecase.GetServicesUseCase
@@ -32,6 +33,8 @@ data class OrderDetailsUiState(
     val order: Order? = null,
     val availableStaff: List<StaffMember> = emptyList(),
     val availableServices: List<Service> = emptyList(),
+    val pricedServices: List<Service> = emptyList(),
+    val resolvedPrices: Map<String, Double> = emptyMap(),
     val pendingStaff: List<OrderStaff> = emptyList(),
     val pendingItems: List<OrderItem> = emptyList(),
     val isLoading: Boolean = true,
@@ -46,7 +49,8 @@ class OrderDetailsViewModel @Inject constructor(
     private val getOrderById: GetOrderByIdUseCase,
     private val orderRepository: OrderRepository,
     private val staffRepository: StaffRepository,
-    private val getServicesUseCase: GetServicesUseCase
+    private val getServicesUseCase: GetServicesUseCase,
+    private val serviceRepository: ServiceRepository
 ) : ViewModel() {
 
     private val orderId: String = checkNotNull(savedStateHandle["orderId"])
@@ -57,7 +61,10 @@ class OrderDetailsViewModel @Inject constructor(
     init {
         load()
         getServicesUseCase()
-            .onEach { services -> _uiState.update { it.copy(availableServices = services) } }
+            .onEach { services ->
+                _uiState.update { it.copy(availableServices = services) }
+                _uiState.value.order?.vehicle?.vehicleTypeId?.let { refreshPrices(it) }
+            }
             .catch { }
             .launchIn(viewModelScope)
     }
@@ -84,6 +91,18 @@ class OrderDetailsViewModel @Inject constructor(
                     errorMessage = orderResult.exceptionOrNull()?.message
                 )
             }
+            order?.vehicle?.vehicleTypeId?.let { refreshPrices(it) }
+        }
+    }
+
+    private fun refreshPrices(vehicleTypeId: String) {
+        viewModelScope.launch {
+            val pricingList = serviceRepository.getPricingByVehicleType(vehicleTypeId)
+                .getOrNull() ?: emptyList()
+            val prices = pricingList.associate { it.serviceId to it.price }
+            val pricedServiceIds = prices.keys
+            val filtered = _uiState.value.availableServices.filter { it.id in pricedServiceIds }
+            _uiState.update { it.copy(resolvedPrices = prices, pricedServices = filtered) }
         }
     }
 
@@ -116,17 +135,19 @@ class OrderDetailsViewModel @Inject constructor(
         val current = _uiState.value.pendingItems
         val kept = current.filter { item -> services.any { it.id == item.serviceId } }
         val keptIds = kept.mapNotNull { it.serviceId }.toSet()
+        val prices = _uiState.value.resolvedPrices
         val added = services
             .filter { it.id !in keptIds }
             .map { service ->
+                val price = prices[service.id] ?: 0.0
                 OrderItem(
                     id = "pending-${service.id}",
                     orderId = orderId,
                     serviceId = service.id,
                     serviceName = service.name,
-                    unitPrice = 0.0,
+                    unitPrice = price,
                     quantity = 1,
-                    subtotal = 0.0,
+                    subtotal = price,
                     createdAt = OffsetDateTime.now(),
                     serviceColor = service.color,
                     serviceIcon = service.icon

@@ -37,6 +37,10 @@ class ServiceRepositoryImpl @Inject constructor(
         pricingDataSource.getAll().map { it.toDomain() }
     }
 
+    override suspend fun getPricingByVehicleType(vehicleTypeId: String) = runCatching {
+        pricingDataSource.getByVehicleType(vehicleTypeId).map { it.toDomain() }
+    }
+
     override suspend fun addService(service: Service) = runCatching {
         serviceDataSource.insert(service.toDto()).toDomain()
     }

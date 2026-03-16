@@ -24,22 +24,15 @@ import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CheckboxDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.carwash.domain.model.Service
+import com.example.carwash.presentation.components.ServicePickerSheet
 import com.example.carwash.presentation.components.serviceIconDrawable
 import com.example.carwash.presentation.navigation.Screen
 import com.example.carwash.presentation.viewmodel.AddOrderViewModel
@@ -58,19 +52,12 @@ import com.example.carwash.ui.theme.BackgroundDark
 import com.example.carwash.ui.theme.OnSurfaceVariantDark
 import com.example.carwash.ui.theme.OrangePrimary
 import com.example.carwash.ui.theme.SurfaceCardDark
-import com.example.carwash.ui.theme.SurfaceDark
-import kotlinx.coroutines.launch
 import androidx.core.graphics.toColorInt
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ServicesScreen(navController: NavController, viewModel: AddOrderViewModel) {
     val uiState by viewModel.uiState.collectAsState()
     var showServicesSheet by remember { mutableStateOf(false) }
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val scope = rememberCoroutineScope()
-
-    var tempSelected by remember { mutableStateOf<List<Service>>(emptyList()) }
 
     Scaffold(containerColor = BackgroundDark) { paddingValues ->
         Column(
@@ -102,7 +89,6 @@ fun ServicesScreen(navController: NavController, viewModel: AddOrderViewModel) {
                         .clip(RoundedCornerShape(10.dp))
                         .background(SurfaceCardDark)
                         .clickable {
-                            tempSelected = uiState.selectedServices
                             showServicesSheet = true
                         }
                         .padding(horizontal = 14.dp, vertical = 8.dp),
@@ -191,118 +177,17 @@ fun ServicesScreen(navController: NavController, viewModel: AddOrderViewModel) {
         }
     }
 
-    // ── Services bottom sheet ────────────────────────────────────────────────
     if (showServicesSheet) {
-        val grouped = remember(uiState.availableServices) {
-            uiState.availableServices.groupBy { it.category?.name ?: "Otros" }
-        }
-
-        ModalBottomSheet(
-            onDismissRequest = { showServicesSheet = false },
-            sheetState = sheetState,
-            containerColor = SurfaceDark
-        ) {
-            Text(
-                "Seleccionar servicios",
-                color = Color.White,
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
-            )
-            HorizontalDivider(color = Color.White.copy(alpha = 0.06f), thickness = 0.5.dp)
-            LazyColumn(modifier = Modifier.weight(1f)) {
-                grouped.forEach { (categoryName, services) ->
-                    item(key = "header_$categoryName") {
-                        Text(
-                            categoryName.uppercase(),
-                            color = OnSurfaceVariantDark,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            letterSpacing = 0.8.sp,
-                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp)
-                        )
-                    }
-                    items(services, key = { it.id }) { service ->
-                        val isSelected = tempSelected.contains(service)
-                        val iconRes = serviceIconDrawable(service.icon)
-                        val serviceColor = service.color?.let { hex ->
-                            runCatching { Color(hex.toColorInt()) }.getOrNull()
-                        } ?: OnSurfaceVariantDark
-                        val price = uiState.resolvedPrices[service.id]
-
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    tempSelected = if (isSelected) tempSelected - service else tempSelected + service
-                                }
-                                .padding(horizontal = 20.dp, vertical = 14.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            if (iconRes != null) {
-                                Icon(
-                                    painter = painterResource(id = iconRes),
-                                    contentDescription = null,
-                                    tint = serviceColor,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            } else {
-                                Icon(
-                                    imageVector = Icons.Default.Build,
-                                    contentDescription = null,
-                                    tint = OnSurfaceVariantDark,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                            Spacer(Modifier.width(12.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(service.name, color = serviceColor, fontSize = 14.sp)
-                                service.description?.let {
-                                    Text(it, color = OnSurfaceVariantDark, fontSize = 12.sp)
-                                }
-                            }
-                            if (price != null && price > 0.0) {
-                                Text(
-                                    "S/ ${String.format("%.2f", price)}",
-                                    color = Color.White,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    modifier = Modifier.padding(end = 4.dp)
-                                )
-                            }
-                            Checkbox(
-                                checked = isSelected,
-                                onCheckedChange = {
-                                    tempSelected = if (isSelected) tempSelected - service else tempSelected + service
-                                },
-                                colors = CheckboxDefaults.colors(
-                                    checkedColor = OrangePrimary,
-                                    uncheckedColor = OnSurfaceVariantDark
-                                )
-                            )
-                        }
-                        HorizontalDivider(color = Color.White.copy(alpha = 0.06f), thickness = 0.5.dp)
-                    }
-                }
+        ServicePickerSheet(
+            services = uiState.pricedServices,
+            initialSelected = uiState.selectedServices,
+            prices = uiState.resolvedPrices,
+            onDismiss = { showServicesSheet = false },
+            onConfirm = { selected ->
+                viewModel.onServicesConfirmed(selected)
+                showServicesSheet = false
             }
-            Button(
-                onClick = {
-                    viewModel.onServicesConfirmed(tempSelected)
-                    scope.launch { sheetState.hide() }.invokeOnCompletion {
-                        if (!sheetState.isVisible) showServicesSheet = false
-                    }
-                },
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp).height(52.dp),
-                shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary)
-            ) {
-                Text(
-                    "Confirmar (${tempSelected.size} seleccionados)",
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        }
+        )
     }
 }
 

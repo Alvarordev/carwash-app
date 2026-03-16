@@ -90,6 +90,7 @@ import java.time.format.DateTimeFormatter
 import com.example.carwash.domain.model.Service
 import com.example.carwash.domain.model.StaffMember
 import com.example.carwash.domain.model.StaffRole
+import com.example.carwash.presentation.components.ServicePickerSheet
 import com.example.carwash.presentation.components.serviceIconDrawable
 import com.example.carwash.presentation.viewmodel.OrderDetailsViewModel
 import com.example.carwash.ui.theme.BackgroundDark
@@ -342,73 +343,18 @@ fun OrderDetailsScreen(
     }
 
     if (showServicesPicker) {
-        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-        val scope = rememberCoroutineScope()
-
-        // Pre-select services already in pendingItems
-        var tempSelected by remember(showServicesPicker) {
-            mutableStateOf(
-                uiState.pendingItems.mapNotNull { item ->
-                    uiState.availableServices.find { it.id == item.serviceId }
-                }
-            )
-        }
-
-        ModalBottomSheet(
-            onDismissRequest = { showServicesPicker = false },
-            sheetState = sheetState,
-            containerColor = SurfaceDark
-        ) {
-            Text("Seleccionar servicios", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
-            HorizontalDivider(color = Color.White.copy(alpha = 0.06f), thickness = 0.5.dp)
-            LazyColumn(modifier = Modifier.weight(1f)) {
-                items(uiState.availableServices) { service ->
-                    val isSelected = tempSelected.contains(service)
-                    val iconRes = serviceIconDrawable(service.icon)
-                    val serviceColor = service.color?.let { hex ->
-                        runCatching { Color(hex.toColorInt()) }.getOrNull()
-                    } ?: OnSurfaceVariantDark
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { tempSelected = if (isSelected) tempSelected - service else tempSelected + service }
-                            .padding(horizontal = 20.dp, vertical = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        if (iconRes != null) {
-                            Icon(painter = painterResource(id = iconRes), contentDescription = null, tint = serviceColor, modifier = Modifier.size(16.dp))
-                        } else {
-                            Icon(imageVector = Icons.Default.Build, contentDescription = null, tint = OnSurfaceVariantDark, modifier = Modifier.size(16.dp))
-                        }
-                        Spacer(Modifier.width(12.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(service.name, color = serviceColor, fontSize = 14.sp)
-                            service.description?.let { Text(it, color = OnSurfaceVariantDark, fontSize = 12.sp) }
-                        }
-                        Checkbox(
-                            checked = isSelected,
-                            onCheckedChange = { tempSelected = if (isSelected) tempSelected - service else tempSelected + service },
-                            colors = CheckboxDefaults.colors(checkedColor = OrangePrimary, uncheckedColor = OnSurfaceVariantDark)
-                        )
-                    }
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.06f), thickness = 0.5.dp)
-                }
+        ServicePickerSheet(
+            services = uiState.pricedServices,
+            initialSelected = uiState.pendingItems.mapNotNull { item ->
+                uiState.pricedServices.find { it.id == item.serviceId }
+            },
+            prices = uiState.resolvedPrices,
+            onDismiss = { showServicesPicker = false },
+            onConfirm = { selected ->
+                viewModel.setServices(selected)
+                showServicesPicker = false
             }
-            Button(
-                onClick = {
-                    viewModel.setServices(tempSelected)
-                    scope.launch { sheetState.hide() }.invokeOnCompletion {
-                        if (!sheetState.isVisible) showServicesPicker = false
-                    }
-                },
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp).height(52.dp),
-                shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary)
-            ) {
-                Text("Confirmar (${tempSelected.size} seleccionados)", color = Color.White, fontWeight = FontWeight.Bold)
-            }
-        }
+        )
     }
 
     selectedPhotoUrl?.let { url ->

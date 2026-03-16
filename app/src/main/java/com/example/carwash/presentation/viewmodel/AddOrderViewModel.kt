@@ -16,6 +16,7 @@ import com.example.carwash.domain.model.VehicleType
 import com.example.carwash.data.remote.datasource.VehicleAnalysisDatasource
 import com.example.carwash.data.session.CompanySession
 import com.example.carwash.domain.repository.CustomerRepository
+import com.example.carwash.domain.repository.ServiceRepository
 import com.example.carwash.domain.repository.VehicleRepository
 import com.example.carwash.domain.usecase.AddOrderUseCase
 import com.example.carwash.domain.usecase.GetPromotionsUseCase
@@ -52,6 +53,7 @@ data class AddOrderUiState(
         val selectedPromotion: Promotion? = null,
         val availableVehicleTypes: List<VehicleType> = emptyList(),
         val availableServices: List<Service> = emptyList(),
+        val pricedServices: List<Service> = emptyList(),
         val availableStaff: List<StaffMember> = emptyList(),
         val availablePromotions: List<Promotion> = emptyList(),
         val isLoading: Boolean = true,
@@ -85,6 +87,7 @@ constructor(
         private val getPromotionsUseCase: GetPromotionsUseCase,
         private val getStaffUseCase: GetStaffUseCase,
         private val getServicePricingUseCase: GetServicePricingUseCase,
+        private val serviceRepository: ServiceRepository,
         private val vehicleRepository: VehicleRepository,
         private val vehicleAnalysisDataSource: VehicleAnalysisDatasource,
         private val customerRepository: CustomerRepository,
@@ -111,7 +114,10 @@ constructor(
                 .launchIn(viewModelScope)
 
         getServicesUseCase()
-                .onEach { services -> _uiState.update { it.copy(availableServices = services) } }
+                .onEach { services ->
+                    _uiState.update { it.copy(availableServices = services) }
+                    refreshPrices()
+                }
                 .catch { Log.e(TAG, "Error loading services", it) }
                 .launchIn(viewModelScope)
 
@@ -159,37 +165,29 @@ constructor(
         val current = _uiState.value.selectedServices.toMutableList()
         if (current.contains(service)) current.remove(service) else current.add(service)
         _uiState.update { it.copy(selectedServices = current) }
-        refreshPrices()
     }
 
     fun onServicesConfirmed(services: List<Service>) {
         _uiState.update { it.copy(selectedServices = services) }
-        refreshPrices()
     }
 
     fun onServiceRemoved(service: Service) {
         _uiState.update { it.copy(selectedServices = it.selectedServices - service) }
-        refreshPrices()
     }
 
     /**
-     * Re-fetch prices for all currently selected services against the selected vehicle type. Runs
-     * async — updates [AddOrderUiState.resolvedPrices] when done.
+     * Bulk-fetch prices for the selected vehicle type, then update [resolvedPrices] and
+     * [pricedServices] (only services that have a price for this vehicle type).
      */
     private fun refreshPrices() {
         val vehicleTypeId = _uiState.value.vehicleType?.id ?: return
-        val services = _uiState.value.selectedServices
-        if (services.isEmpty()) {
-            _uiState.update { it.copy(resolvedPrices = emptyMap()) }
-            return
-        }
         viewModelScope.launch {
-            val prices = mutableMapOf<String, Double>()
-            services.forEach { service ->
-                val pricing = getServicePricingUseCase(service.id, vehicleTypeId)
-                prices[service.id] = pricing?.price ?: 0.0
-            }
-            _uiState.update { it.copy(resolvedPrices = prices) }
+            val pricingList = serviceRepository.getPricingByVehicleType(vehicleTypeId)
+                .getOrNull() ?: emptyList()
+            val prices = pricingList.associate { it.serviceId to it.price }
+            val pricedServiceIds = prices.keys
+            val filtered = _uiState.value.availableServices.filter { it.id in pricedServiceIds }
+            _uiState.update { it.copy(resolvedPrices = prices, pricedServices = filtered) }
         }
     }
 
