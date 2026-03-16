@@ -106,6 +106,16 @@ data class InventoryItem(
 
 data class PaymentMethod(val id: String, val name: String)
 
+data class UserProfile(
+    val id: String,
+    val firstName: String,
+    val lastName: String,
+    val email: String? = null,
+    val role: UserProfileRole
+) {
+    val fullName: String get() = "$firstName $lastName"
+}
+
 data class Promotion(
     val id: String,
     val name: String,

@@ -23,3 +23,14 @@ enum class OrderStatus { EnProceso, Lavando, Terminado, Entregado, Anulado }
 enum class PaymentStatus { Pendiente, Pagado, Parcial }
 
 enum class OrderPeriod { Today, ThisWeek, ThisMonth }
+
+enum class UserProfileRole {
+    SuperAdmin, Admin, Operator;
+
+    val displayName: String
+        get() = when (this) {
+            SuperAdmin -> "Super Admin"
+            Admin -> "Administrador"
+            Operator -> "Operador"
+        }
+}

@@ -317,6 +317,16 @@ class PaymentMethodRemoteDataSource @Inject constructor(
             .decodeList()
 }
 
+class UserProfileRemoteDataSource @Inject constructor(
+    private val client: SupabaseClient
+) {
+    suspend fun getById(userId: String): UserProfileDto? =
+        client.postgrest["user_profiles"]
+            .select { filter { eq("id", userId) } }
+            .decodeList<UserProfileDto>()
+            .firstOrNull()
+}
+
 class PromotionRemoteDataSource @Inject constructor(
     private val client: SupabaseClient
 ) {

@@ -10,7 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.List
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -31,7 +31,7 @@ import androidx.navigation.navArgument
 import com.example.carwash.presentation.screens.dashboard.DashboardScreen
 import com.example.carwash.presentation.screens.orders.OrderDetailsScreen
 import com.example.carwash.presentation.screens.orders.OrdersScreen
-import com.example.carwash.presentation.screens.profile.ProfileScreen
+import com.example.carwash.presentation.screens.settings.SettingsScreen
 import com.example.carwash.ui.theme.OnSurfaceDark
 import com.example.carwash.ui.theme.OrangePrimary
 import com.example.carwash.ui.theme.SurfaceDark
@@ -43,7 +43,7 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector?
     // Main Screens (BottomNav)
     object Dashboard : Screen("dashboard", "Inicio", Icons.Default.Home)
     object Orders : Screen("orders", "Órdenes", Icons.Default.List)
-    object Profile : Screen("profile", "Perfil", Icons.Default.Person)
+    object Settings : Screen("settings", "Ajustes", Icons.Default.Settings)
 
     // Add Order Wizard Steps
     object AddOrderPhoto : Screen("add_order_photo", "Fotos")
@@ -56,7 +56,7 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector?
     object OrderDetail : Screen("order_details/{orderId}", "Orden")
 }
 
-private val tabRoutes = listOf(Screen.Dashboard.route, Screen.Profile.route)
+private val tabRoutes = listOf(Screen.Dashboard.route, Screen.Settings.route)
 private const val TAB_ANIM_DURATION = 300
 
 @Composable
@@ -65,7 +65,7 @@ fun MainScreen(onAddOrder: () -> Unit) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    val navigationItems = listOf(Screen.Dashboard, Screen.Profile)
+    val navigationItems = listOf(Screen.Dashboard, Screen.Settings)
     val showBottomBar = currentRoute != Screen.OrderDetail.route
 
     Scaffold(
@@ -158,7 +158,7 @@ fun MainScreen(onAddOrder: () -> Unit) {
                     onOrderClick = { orderId -> navController.navigate("order_details/$orderId") }
                 )
             }
-            composable(Screen.Profile.route) { ProfileScreen() }
+            composable(Screen.Settings.route) { SettingsScreen() }
             composable(
                 route = Screen.OrderDetail.route,
                 arguments = listOf(navArgument("orderId") { type = NavType.StringType })

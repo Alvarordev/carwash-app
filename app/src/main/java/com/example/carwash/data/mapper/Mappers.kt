@@ -14,6 +14,7 @@ import com.example.carwash.data.remote.dto.ServiceCategoryDto
 import com.example.carwash.data.remote.dto.ServiceDto
 import com.example.carwash.data.remote.dto.ServicePricingDto
 import com.example.carwash.data.remote.dto.StaffMemberDto
+import com.example.carwash.data.remote.dto.UserProfileDto
 import com.example.carwash.data.remote.dto.VehicleDto
 import com.example.carwash.data.remote.dto.VehicleTypeDto
 import com.example.carwash.domain.model.*
@@ -34,6 +35,12 @@ internal fun String?.toDocumentType(): DocumentType? = when (this) {
     "carnet_extranjeria" -> DocumentType.CarnetExtranjeria
     "pasaporte" -> DocumentType.Pasaporte
     else -> null
+}
+
+internal fun String.toUserProfileRole(): UserProfileRole = when (this) {
+    "super_admin" -> UserProfileRole.SuperAdmin
+    "admin" -> UserProfileRole.Admin
+    else -> UserProfileRole.Operator
 }
 
 internal fun String.toStaffRole(): StaffRole = when (this) {
@@ -191,6 +198,14 @@ fun PromotionDto.toDomain() = Promotion(
 )
 
 fun PaymentMethodDto.toDomain() = PaymentMethod(id = id, name = name)
+
+fun UserProfileDto.toDomain() = UserProfile(
+    id = id,
+    firstName = firstName,
+    lastName = lastName,
+    email = email,
+    role = role.toUserProfileRole()
+)
 
 fun OrderItemDto.toDomain() = OrderItem(
     id = id,

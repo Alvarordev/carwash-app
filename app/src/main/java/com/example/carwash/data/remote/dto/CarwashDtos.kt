@@ -192,3 +192,15 @@ data class PaymentMethodDto(
     @SerialName("is_active") val isActive: Boolean = true,
     @SerialName("company_id") val companyId: String? = null
 )
+
+@Serializable
+data class UserProfileDto(
+    val id: String,
+    @SerialName("first_name") val firstName: String,
+    @SerialName("last_name") val lastName: String,
+    val email: String? = null,
+    val role: String,
+    @SerialName("company_id") val companyId: String? = null,
+    @SerialName("created_at") val createdAt: String? = null,
+    @SerialName("updated_at") val updatedAt: String? = null
+)

@@ -79,6 +79,10 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideUserProfileDataSource(client: SupabaseClient) = UserProfileRemoteDataSource(client)
+
+    @Provides
+    @Singleton
     fun providePromotionDataSource(client: SupabaseClient) = PromotionRemoteDataSource(client)
 
     @Provides
@@ -168,4 +172,11 @@ object AppModule {
             companyDataSource: CompanyRemoteDataSource,
             companySession: CompanySession
     ): AuthRepository = AuthRepositoryImpl(client, companyDataSource, companySession)
+
+    @Provides
+    @Singleton
+    fun provideUserProfileRepository(
+            client: SupabaseClient,
+            dataSource: UserProfileRemoteDataSource
+    ): UserProfileRepository = UserProfileRepositoryImpl(client, dataSource)
 }

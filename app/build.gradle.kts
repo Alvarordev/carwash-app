@@ -85,6 +85,7 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     implementation(libs.androidx.compose.material.icons.extended)
+    ksp("org.jetbrains.kotlin:kotlin-metadata-jvm:2.3.0")
 
     // Hilt
     implementation(libs.hilt.android)
@@ -114,6 +115,9 @@ dependencies {
     implementation(libs.camerax.lifecycle)
     implementation(libs.camerax.view)
     implementation(libs.camerax.compose)
+
+    // DataStore
+    implementation(libs.androidx.datastore.preferences)
 
     // Accompanist
     implementation(libs.accompanist.permissions)
