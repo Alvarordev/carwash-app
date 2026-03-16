@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.carwash.domain.model.AppSessionState
 import com.example.carwash.domain.repository.AuthRepository
+import com.example.carwash.util.toUserMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.jan.supabase.auth.status.SessionStatus
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -75,7 +76,7 @@ class AuthViewModel @Inject constructor(
             try {
                 authRepository.signOut()
             } catch (e: Exception) {
-                _error.value = e.localizedMessage ?: "Error al cerrar sesión"
+                _error.value = e.toUserMessage("No pudimos cerrar sesion. Intenta de nuevo.")
             }
         }
     }

@@ -11,6 +11,7 @@ import com.example.carwash.domain.model.PaymentMethod
 import com.example.carwash.domain.model.StaffMember
 import com.example.carwash.domain.repository.OrderRepository
 import com.example.carwash.domain.repository.StaffRepository
+import com.example.carwash.util.toUserMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.LocalDate
 import java.time.ZoneId
@@ -105,20 +106,20 @@ class DashboardViewModel @Inject constructor(
                     _baseState.update { it.copy(isLoading = false, errorMessage = null) }
                 }
                 .onFailure { err ->
-                    _baseState.update { it.copy(isLoading = false, errorMessage = err.message ?: "Error") }
+                    applyLoadError(err)
                 }
         }
 
         viewModelScope.launch {
             orderRepository.observeOrdersByDate(today)
                 .catch { err ->
-                    _baseState.update { it.copy(isLoading = false, errorMessage = err.message ?: "Error") }
+                    applyLoadError(err)
                 }
                 .collect { result ->
                     result
                         .onSuccess { _baseState.update { it.copy(isLoading = false, errorMessage = null) } }
                         .onFailure { err ->
-                            _baseState.update { it.copy(isLoading = false, errorMessage = err.message ?: "Error") }
+                            applyLoadError(err)
                         }
                 }
         }
@@ -152,6 +153,19 @@ class DashboardViewModel @Inject constructor(
                     }
                 }
             }
+        }
+    }
+
+    private fun applyLoadError(error: Throwable) {
+        _baseState.update {
+            it.copy(
+                isLoading = false,
+                errorMessage = if (_allWeekOrders.value.isEmpty()) {
+                    error.toUserMessage("No pudimos cargar el dashboard. Intenta de nuevo.")
+                } else {
+                    null
+                }
+            )
         }
     }
 

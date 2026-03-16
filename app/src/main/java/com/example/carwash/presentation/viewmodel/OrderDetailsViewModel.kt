@@ -16,6 +16,7 @@ import com.example.carwash.domain.repository.ServiceRepository
 import com.example.carwash.domain.repository.StaffRepository
 import com.example.carwash.domain.usecase.GetOrderByIdUseCase
 import com.example.carwash.domain.usecase.GetServicesUseCase
+import com.example.carwash.util.toUserMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.OffsetDateTime
 import javax.inject.Inject
@@ -92,27 +93,41 @@ class OrderDetailsViewModel @Inject constructor(
 
     fun load() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            _uiState.update { current ->
+                current.copy(
+                    isLoading = current.order == null,
+                    errorMessage = null
+                )
+            }
             val orderDeferred = async { getOrderById.refresh(orderId) }
             val staffDeferred = async { staffRepository.getActiveStaff() }
 
             val orderResult = orderDeferred.await()
             val staffResult = staffDeferred.await()
 
-            val order = orderResult.getOrNull()
-            val staff = staffResult.getOrNull() ?: emptyList()
+            val refreshedOrder = orderResult.getOrNull()
+            val refreshedStaff = staffResult.getOrNull()
 
-            _uiState.update {
-                it.copy(
+            _uiState.update { current ->
+                val order = refreshedOrder ?: current.order
+                current.copy(
                     order = order,
-                    availableStaff = staff,
-                    pendingStaff = order?.staff ?: emptyList(),
-                    pendingItems = order?.items ?: emptyList(),
+                    availableStaff = refreshedStaff ?: current.availableStaff,
+                    pendingStaff = refreshedOrder?.staff ?: current.pendingStaff,
+                    pendingItems = refreshedOrder?.items ?: current.pendingItems,
                     isLoading = false,
-                    errorMessage = orderResult.exceptionOrNull()?.message
+                    errorMessage = if (order == null) {
+                        orderResult.exceptionOrNull()?.toUserMessage(
+                            "No pudimos cargar el detalle de la orden. Intenta de nuevo."
+                        ) ?: staffResult.exceptionOrNull()?.toUserMessage(
+                            "No pudimos cargar el detalle de la orden. Intenta de nuevo."
+                        )
+                    } else {
+                        null
+                    }
                 )
             }
-            order?.vehicle?.vehicleTypeId?.let { refreshPrices(it) }
+            _uiState.value.order?.vehicle?.vehicleTypeId?.let { refreshPrices(it) }
         }
     }
 
@@ -236,7 +251,12 @@ class OrderDetailsViewModel @Inject constructor(
                     }
             } catch (e: Exception) {
                 _uiState.update {
-                    it.copy(isSaving = false, errorMessage = e.message ?: "Error saving changes")
+                    it.copy(
+                        isSaving = false,
+                        errorMessage = e.toUserMessage(
+                            "No pudimos guardar los cambios. Intenta de nuevo."
+                        )
+                    )
                 }
             }
         }

@@ -24,6 +24,7 @@ import com.example.carwash.domain.usecase.GetServicePricingUseCase
 import com.example.carwash.domain.usecase.GetServicesUseCase
 import com.example.carwash.domain.usecase.GetStaffUseCase
 import com.example.carwash.domain.usecase.GetVehicleTypesUseCase
+import com.example.carwash.util.toUserMessage
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -328,7 +329,9 @@ constructor(
                         Log.e(TAG, "Error creating order", err)
                         _uiState.update {
                             it.copy(
-                                    error = err.message ?: "Error al crear la orden.",
+                                    error = err.toUserMessage(
+                                            "No pudimos crear la orden. Intenta de nuevo."
+                                    ),
                                     isCreatingOrder = false
                             )
                         }
