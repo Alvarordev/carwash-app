@@ -1,7 +1,7 @@
 package com.example.carwash.data.repository
 
 import android.util.Log
-import com.example.carwash.data.remote.datasource.CompanyRemoteDataSource
+import com.example.carwash.data.remote.datasource.UserProfileRemoteDataSource
 import com.example.carwash.data.session.CompanySession
 import com.example.carwash.domain.model.AppSessionState
 import com.example.carwash.domain.repository.AuthRepository
@@ -24,7 +24,7 @@ import javax.inject.Inject
 
 class AuthRepositoryImpl @Inject constructor(
     private val client: SupabaseClient,
-    private val companyDataSource: CompanyRemoteDataSource,
+    private val userProfileDataSource: UserProfileRemoteDataSource,
     private val companySession: CompanySession
 ) : AuthRepository {
 
@@ -97,15 +97,15 @@ class AuthRepositoryImpl @Inject constructor(
                 _appSessionState.value = AppSessionState.Authenticated(
                     companyId = optimisticCompanyId,
                     staffName = companySession.staffName,
-                    staffMemberId = companySession.staffMemberId,
-                    isReconciling = companySession.staffMemberId == null
+                    staffMemberId = null,
+                    isReconciling = false
                 )
             } else if (_appSessionState.value !is AppSessionState.Authenticated) {
                 _appSessionState.value = AppSessionState.Restoring
             }
 
-            val email = user.email
-            if (email.isNullOrBlank()) {
+            val userId = user.id
+            if (userId.isBlank()) {
                 if (companySession.companyId == null) {
                     companySession.clear()
                     _appSessionState.value = AppSessionState.Unauthenticated
@@ -114,33 +114,27 @@ class AuthRepositoryImpl @Inject constructor(
             }
 
             val needsRemoteReconciliation = forceBlocking ||
-                companySession.staffMemberId == null ||
                 companySession.companyId == null
 
             if (!needsRemoteReconciliation) {
                 return
             }
 
-            companySession.setReconciling(true)
-
             val reconciliationResult = runCatching {
-                companyDataSource.getStaffByEmail(email)
+                userProfileDataSource.getById(userId)
             }
 
-            companySession.setReconciling(false)
-
             reconciliationResult
-                .onSuccess { staff ->
-                    if (staff != null) {
+                .onSuccess { profile ->
+                    if (profile?.companyId != null) {
                         companySession.bootstrap(
-                            companyId = staff.companyId,
-                            staffName = companySession.staffName ?: staff.firstName.takeIf { it.isNotBlank() }
+                            companyId = profile.companyId,
+                            staffName = companySession.staffName ?: profile.firstName.takeIf { it.isNotBlank() }
                         )
-                        companySession.setStaffMember(staff.id)
                     }
                 }
                 .onFailure { error ->
-                    Log.e(TAG, "Failed to reconcile company session", error)
+                    Log.e(TAG, "Failed to reconcile user profile session", error)
                 }
 
             val resolvedCompanyId = companySession.companyId
@@ -148,8 +142,8 @@ class AuthRepositoryImpl @Inject constructor(
                 _appSessionState.value = AppSessionState.Authenticated(
                     companyId = resolvedCompanyId,
                     staffName = companySession.staffName,
-                    staffMemberId = companySession.staffMemberId,
-                    isReconciling = companySession.isReconciling || companySession.staffMemberId == null
+                    staffMemberId = null,
+                    isReconciling = false
                 )
             } else if (forceBlocking) {
                 companySession.clear()

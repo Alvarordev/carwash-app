@@ -169,9 +169,9 @@ object AppModule {
     @Singleton
     fun provideAuthRepository(
             client: SupabaseClient,
-            companyDataSource: CompanyRemoteDataSource,
+            userProfileDataSource: UserProfileRemoteDataSource,
             companySession: CompanySession
-    ): AuthRepository = AuthRepositoryImpl(client, companyDataSource, companySession)
+    ): AuthRepository = AuthRepositoryImpl(client, userProfileDataSource, companySession)
 
     @Provides
     @Singleton

@@ -15,8 +15,7 @@ class CompanySession @Inject constructor() {
     data class Snapshot(
         val companyId: String? = null,
         val staffMemberId: String? = null,
-        val staffName: String? = null,
-        val isReconciling: Boolean = false
+        val staffName: String? = null
     )
 
     private val _snapshot = MutableStateFlow(Snapshot())
@@ -31,9 +30,6 @@ class CompanySession @Inject constructor() {
     val staffName: String?
         get() = _snapshot.value.staffName
 
-    val isReconciling: Boolean
-        get() = _snapshot.value.isReconciling
-
     fun bootstrap(companyId: String?, staffName: String?) {
         _snapshot.value = _snapshot.value.copy(
             companyId = companyId ?: _snapshot.value.companyId,
@@ -43,10 +39,6 @@ class CompanySession @Inject constructor() {
 
     fun setStaffMember(staffMemberId: String?) {
         _snapshot.value = _snapshot.value.copy(staffMemberId = staffMemberId)
-    }
-
-    fun setReconciling(isReconciling: Boolean) {
-        _snapshot.value = _snapshot.value.copy(isReconciling = isReconciling)
     }
 
     fun clear() {

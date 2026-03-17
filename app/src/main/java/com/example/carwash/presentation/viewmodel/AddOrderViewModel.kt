@@ -262,7 +262,7 @@ constructor(
         viewModelScope.launch {
             val state = _uiState.value
 
-            if (companySession.staffMemberId == null) {
+            if (companySession.companyId == null) {
                 _uiState.update {
                     it.copy(error = "Estamos terminando de sincronizar tu sesión. Intenta de nuevo en unos segundos.")
                 }
@@ -313,7 +313,7 @@ constructor(
             val request =
                     CreateOrderRequest(
                             vehicleId = vehicleId,
-                            cashierId = companySession.staffMemberId,
+                            cashierId = null,
                             customerId = customerId,
                             items = orderItems,
                             staffIds = staffIds,

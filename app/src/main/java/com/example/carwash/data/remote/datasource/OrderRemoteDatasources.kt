@@ -73,10 +73,26 @@ class OrderRemoteDataSource @Inject constructor(
             val channel = client.channel("orders-period-${startIso.take(10)}-${System.currentTimeMillis()}")
             val sub = channel
                 .postgresChangeFlow<PostgresAction>(schema = "public") { table = "orders" }
-                .onEach { trySend(getAllForPeriod(startIso, endIso)) }
+                .onEach {
+                    Log.d(TAG, "Realtime change received for orders period $startIso - $endIso")
+                    trySend(getAllForPeriod(startIso, endIso))
+                }
                 .launchIn(this)
-            channel.subscribe()
-            awaitClose { sub.cancel(); launch { withContext(NonCancellable) { client.realtime.removeChannel(channel) } } }
+            try {
+                channel.subscribe()
+                Log.d(TAG, "Realtime subscribed for orders period $startIso - $endIso")
+            } catch (error: Exception) {
+                Log.e(TAG, "Failed to subscribe realtime orders period", error)
+            }
+            awaitClose {
+                sub.cancel()
+                launch {
+                    withContext(NonCancellable) {
+                        Log.d(TAG, "Removing realtime channel for orders period $startIso - $endIso")
+                        client.realtime.removeChannel(channel)
+                    }
+                }
+            }
         }
 
     fun observeTodayOrders(): Flow<List<OrderWithDetailsDto>> = callbackFlow {
@@ -85,14 +101,27 @@ class OrderRemoteDataSource @Inject constructor(
         val channel = client.channel("dashboard-orders")
         val sub = channel
             .postgresChangeFlow<PostgresAction>(schema = "public") { table = "orders" }
-            .onEach { trySend(getAll()) }
+            .onEach {
+                Log.d(TAG, "Realtime change received for dashboard orders")
+                trySend(getAll())
+            }
             .launchIn(this)
 
-        channel.subscribe()
+        try {
+            channel.subscribe()
+            Log.d(TAG, "Realtime subscribed for dashboard orders")
+        } catch (error: Exception) {
+            Log.e(TAG, "Failed to subscribe dashboard realtime orders", error)
+        }
 
         awaitClose {
             sub.cancel()
-            launch { withContext(NonCancellable) { client.realtime.removeChannel(channel) } }
+            launch {
+                withContext(NonCancellable) {
+                    Log.d(TAG, "Removing realtime channel for dashboard orders")
+                    client.realtime.removeChannel(channel)
+                }
+            }
         }
     }
 
@@ -283,3 +312,5 @@ class OrderRemoteDataSource @Inject constructor(
             .delete { filter { eq("id", id) } }
     }
 }
+
+private const val TAG = "OrderRemoteDataSource"

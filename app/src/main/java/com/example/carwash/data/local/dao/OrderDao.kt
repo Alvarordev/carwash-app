@@ -20,7 +20,9 @@ interface OrderDao {
     @Query(
         """
         SELECT * FROM orders
-        WHERE companyId = :companyId AND createdAt >= :startIso AND createdAt <= :endIso
+        WHERE companyId = :companyId
+          AND datetime(createdAt) >= datetime(:startIso)
+          AND datetime(createdAt) <= datetime(:endIso)
         ORDER BY createdAt DESC
         """
     )
@@ -74,11 +76,13 @@ interface OrderDao {
     }
 
     @Query(
-        "SELECT id FROM orders WHERE companyId = :companyId AND createdAt >= :startIso AND createdAt <= :endIso"
+        "SELECT id FROM orders WHERE companyId = :companyId AND datetime(createdAt) >= datetime(:startIso) AND datetime(createdAt) <= datetime(:endIso)"
     )
     suspend fun getOrderIdsForRange(companyId: String, startIso: String, endIso: String): List<String>
 
-    @Query("DELETE FROM orders WHERE companyId = :companyId AND createdAt >= :startIso AND createdAt <= :endIso")
+    @Query(
+        "DELETE FROM orders WHERE companyId = :companyId AND datetime(createdAt) >= datetime(:startIso) AND datetime(createdAt) <= datetime(:endIso)"
+    )
     suspend fun deleteOrdersForRange(companyId: String, startIso: String, endIso: String)
 
     @Query("DELETE FROM order_items WHERE orderId IN (:orderIds)")
