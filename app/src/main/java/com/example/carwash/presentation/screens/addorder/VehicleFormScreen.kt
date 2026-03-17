@@ -34,6 +34,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -68,17 +69,14 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import com.example.carwash.presentation.navigation.Screen
 import com.example.carwash.presentation.viewmodel.AddOrderViewModel
-import com.example.carwash.ui.theme.BackgroundDark
-import com.example.carwash.ui.theme.OnSurfaceVariantDark
 import com.example.carwash.ui.theme.OrangePrimary
-import com.example.carwash.ui.theme.SurfaceCardDark
-import com.example.carwash.ui.theme.SurfaceDark
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VehicleFormScreen(navController: NavController, viewModel: AddOrderViewModel) {
     val uiState by viewModel.uiState.collectAsState()
+    val colorScheme = MaterialTheme.colorScheme
     var showVehicleTypeSheet by rememberSaveable { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
@@ -112,16 +110,16 @@ fun VehicleFormScreen(navController: NavController, viewModel: AddOrderViewModel
 
     val fieldColors = OutlinedTextFieldDefaults.colors(
         focusedBorderColor = OrangePrimary.copy(alpha = pulseAlpha),
-        unfocusedBorderColor = Color.White.copy(alpha = 0.15f * pulseAlpha),
+        unfocusedBorderColor = colorScheme.outline.copy(alpha = 0.6f * pulseAlpha),
         focusedLabelColor = OrangePrimary,
-        unfocusedLabelColor = OnSurfaceVariantDark,
+        unfocusedLabelColor = colorScheme.onSurfaceVariant,
         cursorColor = OrangePrimary,
-        focusedTextColor = Color.White,
-        unfocusedTextColor = Color.White,
+        focusedTextColor = colorScheme.onSurface,
+        unfocusedTextColor = colorScheme.onSurface,
     )
 
     Scaffold(
-        containerColor = BackgroundDark,
+        containerColor = colorScheme.background,
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
         Column(
@@ -136,11 +134,11 @@ fun VehicleFormScreen(navController: NavController, viewModel: AddOrderViewModel
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = { navController.popBackStack() }) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Atrás", tint = Color.White)
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Atrás", tint = colorScheme.onBackground)
                 }
                 Text(
                     text = "Datos del Vehículo",
-                    color = Color.White,
+                    color = colorScheme.onBackground,
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp
                 )
@@ -166,7 +164,7 @@ fun VehicleFormScreen(navController: NavController, viewModel: AddOrderViewModel
                         )
                         Text(
                             "Analizando vehículo...",
-                            color = OnSurfaceVariantDark,
+                            color = colorScheme.onSurfaceVariant,
                             fontSize = 12.sp,
                             modifier = Modifier.padding(vertical = 4.dp)
                         )
@@ -221,16 +219,16 @@ fun VehicleFormScreen(navController: NavController, viewModel: AddOrderViewModel
                     trailingIcon = {
                         Icon(
                             Icons.Default.ArrowDropDown, contentDescription = null,
-                            tint = OnSurfaceVariantDark,
+                            tint = colorScheme.onSurfaceVariant,
                             modifier = Modifier.clickable { showVehicleTypeSheet = true }
                         )
                     },
                     enabled = false,
                     colors = OutlinedTextFieldDefaults.colors(
-                        disabledBorderColor = Color.White.copy(alpha = 0.15f),
-                        disabledLabelColor = OnSurfaceVariantDark,
-                        disabledTextColor = Color.White,
-                        disabledTrailingIconColor = OnSurfaceVariantDark,
+                        disabledBorderColor = colorScheme.outline.copy(alpha = 0.6f),
+                        disabledLabelColor = colorScheme.onSurfaceVariant,
+                        disabledTextColor = colorScheme.onSurface,
+                        disabledTrailingIconColor = colorScheme.onSurfaceVariant,
                         disabledContainerColor = Color.Transparent
                     )
                 )
@@ -262,23 +260,23 @@ fun VehicleFormScreen(navController: NavController, viewModel: AddOrderViewModel
         ModalBottomSheet(
             onDismissRequest = { showVehicleTypeSheet = false },
             sheetState = sheetState,
-            containerColor = SurfaceDark
+            containerColor = colorScheme.surface
         ) {
             Text(
                 "Tipo de Vehículo",
-                color = Color.White,
+                color = colorScheme.onSurface,
                 fontWeight = FontWeight.Bold,
                 fontSize = 16.sp,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
             )
-            HorizontalDivider(color = Color.White.copy(alpha = 0.06f), thickness = 0.5.dp)
+            HorizontalDivider(color = colorScheme.outline.copy(alpha = 0.35f), thickness = 0.5.dp)
             LazyColumn(contentPadding = PaddingValues(bottom = 32.dp)) {
                 items(uiState.availableVehicleTypes) { type ->
                     ListItem(
-                        headlineContent = { Text(type.name, color = Color.White) },
-                        supportingContent = type.description?.let { { Text(it, color = OnSurfaceVariantDark) } },
+                        headlineContent = { Text(type.name, color = colorScheme.onSurface) },
+                        supportingContent = type.description?.let { { Text(it, color = colorScheme.onSurfaceVariant) } },
                         leadingContent = {
-                            Icon(Icons.Default.DirectionsCar, contentDescription = null, tint = OnSurfaceVariantDark)
+                            Icon(Icons.Default.DirectionsCar, contentDescription = null, tint = colorScheme.onSurfaceVariant)
                         },
                         modifier = Modifier.clickable {
                             viewModel.onVehicleTypeSelected(type)
@@ -287,7 +285,7 @@ fun VehicleFormScreen(navController: NavController, viewModel: AddOrderViewModel
                             }
                         }
                     )
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.06f), thickness = 0.5.dp)
+                    HorizontalDivider(color = colorScheme.outline.copy(alpha = 0.35f), thickness = 0.5.dp)
                 }
             }
         }

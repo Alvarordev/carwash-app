@@ -20,7 +20,7 @@ data class SettingsUiState(
     val userRole: String = "",
     val userEmail: String = "",
     val isLoadingProfile: Boolean = true,
-    val themePreference: ThemePreference = ThemePreference.Dark
+    val themePreference: ThemePreference = ThemePreference.System
 )
 
 @HiltViewModel

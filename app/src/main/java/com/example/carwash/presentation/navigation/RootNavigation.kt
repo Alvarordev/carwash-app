@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.WifiOff
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -132,10 +133,11 @@ fun RootNavigation(
             enter = slideInVertically(tween(300)) { it },
             exit = slideOutVertically(tween(300)) { it }
         ) {
+            val colorScheme = MaterialTheme.colorScheme
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color(0xFFB71C1C))
+                    .background(colorScheme.error)
                     .navigationBarsPadding()
                     .padding(horizontal = 16.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,

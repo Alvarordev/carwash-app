@@ -34,15 +34,26 @@ import androidx.compose.ui.unit.sp
 import com.example.carwash.R
 import com.example.carwash.domain.model.Order
 import com.example.carwash.domain.model.OrderStatus
-import com.example.carwash.ui.theme.OnSurfaceVariantDark
+import com.example.carwash.ui.theme.BackgroundDark
 import com.example.carwash.ui.theme.OrangePrimary
 import com.example.carwash.ui.theme.StatusCancelled
 import com.example.carwash.ui.theme.StatusDone
+import com.example.carwash.ui.theme.StatusDoneBackground
+import com.example.carwash.ui.theme.StatusDoneBackgroundLight
 import com.example.carwash.ui.theme.StatusInProgress
+import com.example.carwash.ui.theme.StatusInProgressBackground
+import com.example.carwash.ui.theme.StatusInProgressBackgroundLight
 import com.example.carwash.ui.theme.StatusPending
+import com.example.carwash.ui.theme.StatusPendingBackground
+import com.example.carwash.ui.theme.StatusPendingBackgroundLight
 import com.example.carwash.ui.theme.StatusWashing
-import com.example.carwash.ui.theme.SurfaceCardDark
+import com.example.carwash.ui.theme.StatusWashingBackground
+import com.example.carwash.ui.theme.StatusWashingBackgroundLight
 import androidx.core.graphics.toColorInt
+import com.example.carwash.ui.theme.StatusDoneLight
+import com.example.carwash.ui.theme.StatusInProgressLight
+import com.example.carwash.ui.theme.StatusPendingLight
+import com.example.carwash.ui.theme.StatusWashingLight
 
 @Composable
 fun OrderListCard(
@@ -50,6 +61,8 @@ fun OrderListCard(
     modifier: Modifier = Modifier,
     onActionClick: () -> Unit = {}
 ) {
+    val colorScheme = MaterialTheme.colorScheme
+    val isDarkTheme = colorScheme.background == BackgroundDark
     val vehicleDisplayName = order.vehicle?.let { v ->
         "${v.brand} ${v.model ?: ""}".trim().uppercase()
     } ?: "VEHÍCULO"
@@ -62,32 +75,48 @@ fun OrderListCard(
 
     val serviceColor = firstItem?.serviceColor?.let { hex ->
         runCatching { Color(hex.toColorInt()) }.getOrNull()
-    } ?: OnSurfaceVariantDark
+    } ?: colorScheme.onSurfaceVariant
     val serviceIconRes = serviceIconDrawable(firstItem?.serviceIcon)
 
     val (statusLabel, statusColor) = when (order.status) {
-        OrderStatus.EnProceso  -> "Pendiente"  to StatusInProgress
-        OrderStatus.Lavando    -> "En Proceso" to StatusWashing
-        OrderStatus.Terminado  -> "Terminado"  to StatusPending
-        OrderStatus.Entregado  -> "Entregado"  to StatusDone
+        OrderStatus.EnProceso  -> "Pendiente"  to if (isDarkTheme) StatusInProgress else StatusInProgressLight
+        OrderStatus.Lavando    -> "En Proceso" to if (isDarkTheme) StatusWashing else StatusWashingLight
+        OrderStatus.Terminado  -> "Terminado"  to if (isDarkTheme) StatusPending else StatusPendingLight
+        OrderStatus.Entregado  -> "Entregado"  to if (isDarkTheme) StatusDone else StatusDoneLight
         OrderStatus.Anulado    -> "Anulado"    to StatusCancelled
     }
 
-    val (buttonText, buttonColor) = when (order.status) {
-        OrderStatus.EnProceso  -> "Iniciar Lavado"  to StatusInProgress
-        OrderStatus.Lavando    -> "Terminar Lavado"  to StatusWashing
-        OrderStatus.Terminado  -> "Finalizar Servicio" to StatusPending
-        OrderStatus.Entregado  -> "Ver Detalles"     to StatusDone
-        OrderStatus.Anulado    -> ""                  to Color.Transparent
+    val buttonText = when (order.status) {
+        OrderStatus.EnProceso  -> "Iniciar Lavado"
+        OrderStatus.Lavando    -> "Terminar Lavado"
+        OrderStatus.Terminado  -> "Finalizar Servicio"
+        OrderStatus.Entregado  -> "Ver Detalles"
+        OrderStatus.Anulado    -> ""
+    }
+
+    val statusIcon = when (order.status) {
+        OrderStatus.EnProceso  -> R.drawable.circle
+        OrderStatus.Lavando    -> R.drawable.half_circle
+        OrderStatus.Terminado  -> R.drawable.quarter_circle
+        OrderStatus.Entregado  -> R.drawable.check_circle_solid
+        OrderStatus.Anulado    -> null
+    }
+
+    val statusColorBackground = when (order.status) {
+        OrderStatus.EnProceso  -> if (isDarkTheme) StatusInProgressBackground else StatusInProgressBackgroundLight
+        OrderStatus.Lavando    -> if (isDarkTheme) StatusWashingBackground else StatusWashingBackgroundLight
+        OrderStatus.Terminado  -> if (isDarkTheme) StatusPendingBackground else StatusPendingBackgroundLight
+        OrderStatus.Entregado  -> if (isDarkTheme) StatusDoneBackground else StatusDoneBackgroundLight
+        OrderStatus.Anulado    -> Color.Transparent
     }
 
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(28.dp))
-            .background(SurfaceCardDark)
-            .border(width = 1.dp, color = Color(0xFF414141), shape = RoundedCornerShape(28.dp))
-            .padding(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 12.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .background(colorScheme.surface)
+            .border(width = 1.dp, color = colorScheme.outline.copy(alpha = 0.5f), shape = RoundedCornerShape(20.dp))
+            .padding(horizontal = 16.dp, vertical = 16.dp)
     ) {
         Column {
             Row(
@@ -95,17 +124,17 @@ fun OrderListCard(
                 verticalAlignment = Alignment.Top,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Column {
                     Text(
                         text = vehicleDisplayName,
                         color = MaterialTheme.colorScheme.onBackground,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
                     )
                     Text(
                         text = plate,
                         fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
@@ -114,67 +143,90 @@ fun OrderListCard(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     modifier = Modifier
                         .clip(RoundedCornerShape(20.dp))
-                        .background(color = MaterialTheme.colorScheme.background)
-                        .border(
-                            width = 1.dp,
-                            color = Color(0xFF414141),
-                            shape = RoundedCornerShape(20.dp)
-                        )
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                        .background(color = statusColorBackground)
+                        .padding(start = 10.dp, end = 12.dp, top = 4.dp, bottom = 4.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(6.dp)
-                            .clip(CircleShape)
-                            .background(statusColor)
-                    )
+                    if (statusIcon != null) {
+                        Icon(
+                            painter = painterResource(id = statusIcon),
+                            contentDescription = null,
+                            tint = statusColor,
+                            modifier = Modifier.size(14.dp).padding(bottom = 1.5.dp)
+                        )
+                    }
                     Text(
                         text = statusLabel,
                         color = statusColor,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium
                     )
                 }
             }
 
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(16.dp))
 
             Row(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (serviceIconRes != null) {
-                        Icon(
-                            painter = painterResource(id = serviceIconRes),
-                            contentDescription = null,
-                            tint = serviceColor,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    } else {
-                        Icon(
-                            imageVector = Icons.Default.DirectionsCar,
-                            contentDescription = null,
-                            tint = serviceColor,
-                            modifier = Modifier.size(16.dp)
+
+                Column {
+                    Text(
+                        text = "Servicio",
+                        color = colorScheme.onSurfaceVariant,
+                        fontSize = 12.sp
+                    )
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (serviceIconRes != null) {
+                            Icon(
+                                painter = painterResource(id = serviceIconRes),
+                                contentDescription = null,
+                                tint = serviceColor,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.DirectionsCar,
+                                contentDescription = null,
+                                tint = serviceColor,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = serviceDisplay,
+                            color = MaterialTheme.colorScheme.onBackground,
+                            fontSize = 14.sp,
                         )
                     }
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        text = serviceDisplay,
-                        color = serviceColor,
-                        fontSize = 14.sp,
-                    )
                 }
 
-                Text(
-                    text = "S/ ${total.toInt()}",
-                    color = MaterialTheme.colorScheme.onBackground,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
-                )
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = "Total",
+                        color = colorScheme.onSurfaceVariant,
+                        fontSize = 12.sp,
+                    )
+
+                    Text(
+                        text = "S/${total.toInt()}",
+                        color = MaterialTheme.colorScheme.onBackground,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(color = colorScheme.outline.copy(alpha = 0.35f))
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -182,15 +234,15 @@ fun OrderListCard(
                 Button(
                     onClick = onActionClick,
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = buttonColor),
-                    shape = RoundedCornerShape(20.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = colorScheme.surfaceVariant),
+                    shape = RoundedCornerShape(12.dp),
                     contentPadding = PaddingValues(vertical = 4.dp)
                 ) {
                     Text(
                         text = buttonText,
-                        color = Color.White,
+                        color = statusColor,
                         fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
             }

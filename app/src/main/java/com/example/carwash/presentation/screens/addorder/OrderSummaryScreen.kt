@@ -31,6 +31,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -53,10 +54,7 @@ import coil.compose.AsyncImage
 import com.example.carwash.domain.model.Service
 import com.example.carwash.presentation.components.serviceIconDrawable
 import com.example.carwash.presentation.viewmodel.AddOrderViewModel
-import com.example.carwash.ui.theme.BackgroundDark
-import com.example.carwash.ui.theme.OnSurfaceVariantDark
 import com.example.carwash.ui.theme.OrangePrimary
-import com.example.carwash.ui.theme.SurfaceCardDark
 
 @Composable
 fun OrderSummaryScreen(
@@ -65,6 +63,7 @@ fun OrderSummaryScreen(
     onOrderCreated: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val colorScheme = MaterialTheme.colorScheme
 
     LaunchedEffect(uiState.orderCreated) {
         if (uiState.orderCreated) {
@@ -72,7 +71,7 @@ fun OrderSummaryScreen(
         }
     }
 
-    Scaffold(containerColor = BackgroundDark) { paddingValues ->
+    Scaffold(containerColor = colorScheme.background) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -86,11 +85,11 @@ fun OrderSummaryScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = { navController.popBackStack() }) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Atrás", tint = Color.White)
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Atrás", tint = colorScheme.onBackground)
                 }
                 Text(
                     text = "Resumen de la Orden",
-                    color = Color.White,
+                    color = colorScheme.onBackground,
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp
                 )
@@ -169,7 +168,7 @@ fun OrderSummaryScreen(
                     item {
                         Text(
                             "Sin servicios seleccionados",
-                            color = OnSurfaceVariantDark,
+                            color = colorScheme.onSurfaceVariant,
                             fontSize = 13.sp,
                             modifier = Modifier.padding(vertical = 4.dp)
                         )
@@ -189,7 +188,7 @@ fun OrderSummaryScreen(
                                 .padding(horizontal = 4.dp, vertical = 8.dp),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text("Total", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                            Text("Total", color = colorScheme.onSurface, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                             Text(
                                 "S/ ${"%.2f".format(uiState.total)}",
                                 color = OrangePrimary,
@@ -225,10 +224,10 @@ fun OrderSummaryScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(16.dp))
-                                .background(SurfaceCardDark)
+                                .background(colorScheme.surface)
                                 .padding(horizontal = 16.dp, vertical = 14.dp)
                         ) {
-                            Text(uiState.observations, color = Color.White, fontSize = 14.sp)
+                            Text(uiState.observations, color = colorScheme.onSurface, fontSize = 14.sp)
                         }
                     }
                 }
@@ -267,25 +266,27 @@ fun OrderSummaryScreen(
 
 @Composable
 private fun SummarySectionHeader(icon: ImageVector, title: String) {
+    val colorScheme = MaterialTheme.colorScheme
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = 20.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(imageVector = icon, contentDescription = null, tint = OnSurfaceVariantDark, modifier = Modifier.size(14.dp))
+        Icon(imageVector = icon, contentDescription = null, tint = colorScheme.onSurfaceVariant, modifier = Modifier.size(14.dp))
         Spacer(Modifier.width(6.dp))
-        Text(title, color = OnSurfaceVariantDark, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.8.sp)
+        Text(title, color = colorScheme.onSurfaceVariant, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.8.sp)
     }
 }
 
 @Composable
 private fun SummaryDetailCard(rows: List<Pair<String, String>>) {
+    val colorScheme = MaterialTheme.colorScheme
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(SurfaceCardDark)
+            .background(colorScheme.surface)
     ) {
         rows.forEachIndexed { index, (key, value) ->
             Row(
@@ -295,11 +296,11 @@ private fun SummaryDetailCard(rows: List<Pair<String, String>>) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(key, color = OnSurfaceVariantDark, fontSize = 14.sp)
-                Text(value, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.End)
+                Text(key, color = colorScheme.onSurfaceVariant, fontSize = 14.sp)
+                Text(value, color = colorScheme.onSurface, fontSize = 14.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.End)
             }
             if (index < rows.size - 1) {
-                HorizontalDivider(color = Color.White.copy(alpha = 0.06f), thickness = 0.5.dp)
+                HorizontalDivider(color = colorScheme.outline.copy(alpha = 0.35f), thickness = 0.5.dp)
             }
         }
     }
@@ -307,26 +308,27 @@ private fun SummaryDetailCard(rows: List<Pair<String, String>>) {
 
 @Composable
 private fun SummaryServiceRow(service: Service, price: Double) {
+    val colorScheme = MaterialTheme.colorScheme
     val iconRes = serviceIconDrawable(service.icon)
     val serviceColor = service.color?.let { hex ->
         runCatching { Color(android.graphics.Color.parseColor(hex)) }.getOrNull()
-    } ?: OnSurfaceVariantDark
+    } ?: colorScheme.onSurfaceVariant
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(SurfaceCardDark)
+            .background(colorScheme.surface)
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (iconRes != null) {
             Icon(painter = painterResource(id = iconRes), contentDescription = null, tint = serviceColor, modifier = Modifier.size(16.dp))
         } else {
-            Icon(imageVector = Icons.Default.Build, contentDescription = null, tint = OnSurfaceVariantDark, modifier = Modifier.size(16.dp))
+            Icon(imageVector = Icons.Default.Build, contentDescription = null, tint = colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
         }
         Spacer(Modifier.width(12.dp))
         Text(service.name, color = serviceColor, fontSize = 14.sp, modifier = Modifier.weight(1f))
-        Text("S/ ${"%.2f".format(price)}", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+        Text("S/ ${"%.2f".format(price)}", color = colorScheme.onSurface, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
     }
 }

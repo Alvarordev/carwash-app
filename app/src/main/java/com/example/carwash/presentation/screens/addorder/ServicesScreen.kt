@@ -26,6 +26,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -48,18 +49,16 @@ import com.example.carwash.presentation.components.ServicePickerSheet
 import com.example.carwash.presentation.components.serviceIconDrawable
 import com.example.carwash.presentation.navigation.Screen
 import com.example.carwash.presentation.viewmodel.AddOrderViewModel
-import com.example.carwash.ui.theme.BackgroundDark
-import com.example.carwash.ui.theme.OnSurfaceVariantDark
 import com.example.carwash.ui.theme.OrangePrimary
-import com.example.carwash.ui.theme.SurfaceCardDark
 import androidx.core.graphics.toColorInt
 
 @Composable
 fun ServicesScreen(navController: NavController, viewModel: AddOrderViewModel) {
     val uiState by viewModel.uiState.collectAsState()
+    val colorScheme = MaterialTheme.colorScheme
     var showServicesSheet by remember { mutableStateOf(false) }
 
-    Scaffold(containerColor = BackgroundDark) { paddingValues ->
+    Scaffold(containerColor = colorScheme.background) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -73,11 +72,11 @@ fun ServicesScreen(navController: NavController, viewModel: AddOrderViewModel) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = { navController.popBackStack() }) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Atrás", tint = Color.White)
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Atrás", tint = colorScheme.onBackground)
                 }
                 Text(
                     text = "Servicios",
-                    color = Color.White,
+                    color = colorScheme.onBackground,
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp,
                     modifier = Modifier.weight(1f)
@@ -87,7 +86,7 @@ fun ServicesScreen(navController: NavController, viewModel: AddOrderViewModel) {
                     modifier = Modifier
                         .padding(end = 8.dp)
                         .clip(RoundedCornerShape(10.dp))
-                        .background(SurfaceCardDark)
+                        .background(colorScheme.surface)
                         .clickable {
                             showServicesSheet = true
                         }
@@ -119,13 +118,13 @@ fun ServicesScreen(navController: NavController, viewModel: AddOrderViewModel) {
                         Icon(
                             Icons.Default.Build,
                             contentDescription = null,
-                            tint = OnSurfaceVariantDark,
+                            tint = colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(14.dp)
                         )
                         Spacer(Modifier.width(6.dp))
                         Text(
                             "SERVICIOS SELECCIONADOS",
-                            color = OnSurfaceVariantDark,
+                            color = colorScheme.onSurfaceVariant,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
                             letterSpacing = 0.8.sp
@@ -139,13 +138,13 @@ fun ServicesScreen(navController: NavController, viewModel: AddOrderViewModel) {
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(16.dp))
-                                .background(SurfaceCardDark)
+                                .background(colorScheme.surface)
                                 .padding(24.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
                                 "No has seleccionado ningún servicio.\nToca «Agregar» para comenzar.",
-                                color = OnSurfaceVariantDark,
+                                color = colorScheme.onSurfaceVariant,
                                 fontSize = 13.sp,
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
                             )
@@ -193,16 +192,17 @@ fun ServicesScreen(navController: NavController, viewModel: AddOrderViewModel) {
 
 @Composable
 private fun SelectedServiceRow(service: Service, onRemove: () -> Unit) {
+    val colorScheme = MaterialTheme.colorScheme
     val iconRes = serviceIconDrawable(service.icon)
     val serviceColor = service.color?.let { hex ->
         runCatching { Color(hex.toColorInt()) }.getOrNull()
-    } ?: OnSurfaceVariantDark
+    } ?: colorScheme.onSurfaceVariant
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(SurfaceCardDark)
+            .background(colorScheme.surface)
             .padding(start = 16.dp, end = 4.dp, top = 12.dp, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -217,7 +217,7 @@ private fun SelectedServiceRow(service: Service, onRemove: () -> Unit) {
             Icon(
                 imageVector = Icons.Default.Build,
                 contentDescription = null,
-                tint = OnSurfaceVariantDark,
+                tint = colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(16.dp)
             )
         }
@@ -232,7 +232,7 @@ private fun SelectedServiceRow(service: Service, onRemove: () -> Unit) {
             Icon(
                 Icons.Default.Close,
                 contentDescription = "Quitar ${service.name}",
-                tint = OnSurfaceVariantDark,
+                tint = colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(16.dp)
             )
         }

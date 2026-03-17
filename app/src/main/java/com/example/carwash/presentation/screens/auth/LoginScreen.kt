@@ -22,6 +22,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -47,13 +48,13 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.carwash.presentation.viewmodel.AuthViewModel
-import com.example.carwash.ui.theme.BackgroundDark
 import com.example.carwash.ui.theme.OrangePrimary
 
 @Composable
 fun LoginScreen(viewModel: AuthViewModel) {
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
+    val colorScheme = MaterialTheme.colorScheme
     val snackbarHostState = remember { SnackbarHostState() }
 
     var email by remember { mutableStateOf("") }
@@ -71,7 +72,7 @@ fun LoginScreen(viewModel: AuthViewModel) {
     }
 
     Scaffold(
-        containerColor = BackgroundDark,
+        containerColor = colorScheme.background,
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { paddingValues ->
         Box(
@@ -91,7 +92,7 @@ fun LoginScreen(viewModel: AuthViewModel) {
                     text = "CarWash Pro",
                     style = MaterialTheme.typography.displaySmall.copy(
                         fontWeight = FontWeight.Black,
-                        color = Color.White
+                        color = colorScheme.onBackground
                     )
                 )
                 
@@ -100,7 +101,7 @@ fun LoginScreen(viewModel: AuthViewModel) {
                 Text(
                     text = "Ingresa a tu cuenta",
                     style = MaterialTheme.typography.bodyLarge.copy(
-                        color = Color.LightGray
+                        color = colorScheme.onSurfaceVariant
                     )
                 )
 
@@ -114,6 +115,15 @@ fun LoginScreen(viewModel: AuthViewModel) {
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
                     keyboardActions = KeyboardActions(
                         onNext = { passwordFocusRequester.requestFocus() }
+                    ),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = OrangePrimary,
+                        unfocusedBorderColor = colorScheme.outline,
+                        focusedLabelColor = OrangePrimary,
+                        unfocusedLabelColor = colorScheme.onSurfaceVariant,
+                        focusedTextColor = colorScheme.onSurface,
+                        unfocusedTextColor = colorScheme.onSurface,
+                        cursorColor = OrangePrimary
                     ),
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
@@ -142,9 +152,22 @@ fun LoginScreen(viewModel: AuthViewModel) {
                         else Icons.Filled.VisibilityOff
 
                         IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                            Icon(imageVector = image, contentDescription = if (passwordVisible) "Ocultar Contraseña" else "Mostrar Contraseña")
+                            Icon(
+                                imageVector = image,
+                                contentDescription = if (passwordVisible) "Ocultar Contraseña" else "Mostrar Contraseña",
+                                tint = colorScheme.onSurfaceVariant
+                            )
                         }
                     },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = OrangePrimary,
+                        unfocusedBorderColor = colorScheme.outline,
+                        focusedLabelColor = OrangePrimary,
+                        unfocusedLabelColor = colorScheme.onSurfaceVariant,
+                        focusedTextColor = colorScheme.onSurface,
+                        unfocusedTextColor = colorScheme.onSurface,
+                        cursorColor = OrangePrimary
+                    ),
                     modifier = Modifier.fillMaxWidth().focusRequester(passwordFocusRequester),
                     shape = RoundedCornerShape(12.dp)
                 )

@@ -22,6 +22,7 @@ import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -44,9 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.toColorInt
 import com.example.carwash.domain.model.Service
-import com.example.carwash.ui.theme.OnSurfaceVariantDark
 import com.example.carwash.ui.theme.OrangePrimary
-import com.example.carwash.ui.theme.SurfaceDark
 import kotlinx.coroutines.launch
 
 /**
@@ -67,6 +66,7 @@ fun ServicePickerSheet(
     onDismiss: () -> Unit,
     onConfirm: (List<Service>) -> Unit
 ) {
+    val colorScheme = MaterialTheme.colorScheme
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
     var tempSelected by remember { mutableStateOf(initialSelected) }
@@ -88,17 +88,17 @@ fun ServicePickerSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = SurfaceDark
+        containerColor = colorScheme.surface
     ) {
         Column(modifier = Modifier.fillMaxHeight(0.9f)) {
             Text(
                 "Seleccionar servicios",
-                color = Color.White,
+                color = colorScheme.onSurface,
                 fontWeight = FontWeight.Bold,
                 fontSize = 16.sp,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
             )
-            HorizontalDivider(color = Color.White.copy(alpha = 0.06f), thickness = 0.5.dp)
+            HorizontalDivider(color = colorScheme.outline.copy(alpha = 0.35f), thickness = 0.5.dp)
 
             LazyColumn(
                 modifier = Modifier
@@ -109,7 +109,7 @@ fun ServicePickerSheet(
                     item(key = "header_$categoryName") {
                         Text(
                             categoryName.uppercase(),
-                            color = OnSurfaceVariantDark,
+                            color = colorScheme.onSurfaceVariant,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
                             letterSpacing = 0.8.sp,
@@ -121,7 +121,7 @@ fun ServicePickerSheet(
                         val iconRes = serviceIconDrawable(service.icon)
                         val serviceColor = service.color?.let { hex ->
                             runCatching { Color(hex.toColorInt()) }.getOrNull()
-                        } ?: OnSurfaceVariantDark
+                        } ?: colorScheme.onSurfaceVariant
                         val price = prices[service.id]
 
                         Row(
@@ -140,7 +140,7 @@ fun ServicePickerSheet(
                                 },
                                 colors = CheckboxDefaults.colors(
                                     checkedColor = OrangePrimary,
-                                    uncheckedColor = OnSurfaceVariantDark
+                                    uncheckedColor = colorScheme.onSurfaceVariant
                                 ),
                                 modifier = Modifier.size(24.dp)
                             )
@@ -156,7 +156,7 @@ fun ServicePickerSheet(
                                 Icon(
                                     imageVector = Icons.Default.Build,
                                     contentDescription = null,
-                                    tint = OnSurfaceVariantDark,
+                                    tint = colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(16.dp)
                                 )
                             }
@@ -164,24 +164,24 @@ fun ServicePickerSheet(
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(service.name, color = serviceColor, fontSize = 14.sp)
                                 service.description?.let {
-                                    Text(it, color = OnSurfaceVariantDark, fontSize = 12.sp)
+                                    Text(it, color = colorScheme.onSurfaceVariant, fontSize = 12.sp)
                                 }
                             }
                             if (price != null && price > 0.0) {
                                 Text(
                                     "S/ ${String.format("%.2f", price)}",
-                                    color = Color.White,
+                                    color = colorScheme.onSurface,
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Medium
                                 )
                             }
                         }
-                        HorizontalDivider(color = Color.White.copy(alpha = 0.06f), thickness = 0.5.dp)
+                        HorizontalDivider(color = colorScheme.outline.copy(alpha = 0.35f), thickness = 0.5.dp)
                     }
                 }
             }
 
-            HorizontalDivider(color = Color.White.copy(alpha = 0.06f), thickness = 0.5.dp)
+            HorizontalDivider(color = colorScheme.outline.copy(alpha = 0.35f), thickness = 0.5.dp)
             Button(
                 onClick = {
                     onConfirm(tempSelected)

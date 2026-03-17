@@ -19,6 +19,7 @@ import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -37,9 +38,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.carwash.ui.theme.OnSurfaceVariantDark
 import com.example.carwash.ui.theme.OrangePrimary
-import com.example.carwash.ui.theme.SurfaceDark
 
 data class ChecklistItem(
     val id: String,
@@ -74,6 +73,7 @@ fun ChecklistBottomSheet(
     onDismiss: () -> Unit,
     onConfirm: (selectedIds: Set<String>) -> Unit
 ) {
+    val colorScheme = MaterialTheme.colorScheme
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var selectedIds by remember { mutableStateOf<Set<String>>(emptySet()) }
 
@@ -90,24 +90,24 @@ fun ChecklistBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = SurfaceDark
+        containerColor = colorScheme.surface
     ) {
         Column(modifier = Modifier.fillMaxHeight(0.7f)) {
             // Title
             Text(
                 text = title,
-                color = Color.White,
+                color = colorScheme.onSurface,
                 fontWeight = FontWeight.Bold,
                 fontSize = 16.sp,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
             )
-            HorizontalDivider(color = Color.White.copy(alpha = 0.06f), thickness = 0.5.dp)
+            HorizontalDivider(color = colorScheme.outline.copy(alpha = 0.35f), thickness = 0.5.dp)
 
             if (items.isEmpty() && emptyMessage != null) {
                 // Empty state
                 Text(
                     text = emptyMessage,
-                    color = OnSurfaceVariantDark,
+                    color = colorScheme.onSurfaceVariant,
                     fontSize = 14.sp,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)
                 )
@@ -137,24 +137,24 @@ fun ChecklistBottomSheet(
                                 },
                                 colors = CheckboxDefaults.colors(
                                     checkedColor = OrangePrimary,
-                                    uncheckedColor = OnSurfaceVariantDark
+                                    uncheckedColor = colorScheme.onSurfaceVariant
                                 ),
                                 modifier = Modifier.size(24.dp)
                             )
                             Text(
                                 text = item.label,
-                                color = Color.White,
+                                color = colorScheme.onSurface,
                                 fontSize = 14.sp,
                                 modifier = Modifier.padding(start = 12.dp)
                             )
                         }
-                        HorizontalDivider(color = Color.White.copy(alpha = 0.06f), thickness = 0.5.dp)
+                        HorizontalDivider(color = colorScheme.outline.copy(alpha = 0.35f), thickness = 0.5.dp)
                     }
                 }
             }
 
             // Confirm button (always pinned at the bottom)
-            HorizontalDivider(color = Color.White.copy(alpha = 0.06f), thickness = 0.5.dp)
+            HorizontalDivider(color = colorScheme.outline.copy(alpha = 0.35f), thickness = 0.5.dp)
             Button(
                 onClick = { onConfirm(selectedIds) },
                 enabled = buttonEnabled(selectedIds) && !isSubmitting,

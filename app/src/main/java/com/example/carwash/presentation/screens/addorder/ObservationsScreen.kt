@@ -29,6 +29,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -52,22 +53,19 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.carwash.presentation.navigation.Screen
 import com.example.carwash.presentation.viewmodel.AddOrderViewModel
-import com.example.carwash.ui.theme.BackgroundDark
-import com.example.carwash.ui.theme.OnSurfaceVariantDark
 import com.example.carwash.ui.theme.OrangePrimary
-import com.example.carwash.ui.theme.SurfaceCardDark
-import com.example.carwash.ui.theme.SurfaceDark
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ObservationsScreen(navController: NavController, viewModel: AddOrderViewModel) {
     val uiState by viewModel.uiState.collectAsState()
+    val colorScheme = MaterialTheme.colorScheme
     var showStaffSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
 
-    Scaffold(containerColor = BackgroundDark) { paddingValues ->
+    Scaffold(containerColor = colorScheme.background) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -81,11 +79,11 @@ fun ObservationsScreen(navController: NavController, viewModel: AddOrderViewMode
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = { navController.popBackStack() }) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Atrás", tint = Color.White)
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Atrás", tint = colorScheme.onBackground)
                 }
                 Text(
                     text = "Observaciones",
-                    color = Color.White,
+                    color = colorScheme.onBackground,
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp
                 )
@@ -101,23 +99,23 @@ fun ObservationsScreen(navController: NavController, viewModel: AddOrderViewMode
                 // Observations section
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Notes, contentDescription = null, tint = OnSurfaceVariantDark, modifier = Modifier.size(14.dp))
+                        Icon(Icons.Default.Notes, contentDescription = null, tint = colorScheme.onSurfaceVariant, modifier = Modifier.size(14.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("OBSERVACIONES", color = OnSurfaceVariantDark, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.8.sp)
+                        Text("OBSERVACIONES", color = colorScheme.onSurfaceVariant, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.8.sp)
                     }
 
                     OutlinedTextField(
                         value = uiState.observations,
                         onValueChange = { viewModel.onObservationsChanged(it) },
-                        placeholder = { Text("Ej: Rayón en puerta derecha, cliente pide revisión de llantas...", color = OnSurfaceVariantDark) },
+                        placeholder = { Text("Ej: Rayón en puerta derecha, cliente pide revisión de llantas...", color = colorScheme.onSurfaceVariant) },
                         modifier = Modifier.fillMaxWidth().height(140.dp),
                         maxLines = 6,
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = OrangePrimary,
-                            unfocusedBorderColor = Color.White.copy(alpha = 0.15f),
+                            unfocusedBorderColor = colorScheme.outline.copy(alpha = 0.6f),
                             cursorColor = OrangePrimary,
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White,
+                            focusedTextColor = colorScheme.onSurface,
+                            unfocusedTextColor = colorScheme.onSurface,
                         )
                     )
                 }
@@ -125,9 +123,9 @@ fun ObservationsScreen(navController: NavController, viewModel: AddOrderViewMode
                 // Staff section
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Person, contentDescription = null, tint = OnSurfaceVariantDark, modifier = Modifier.size(14.dp))
+                        Icon(Icons.Default.Person, contentDescription = null, tint = colorScheme.onSurfaceVariant, modifier = Modifier.size(14.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("PERSONAL ASIGNADO", color = OnSurfaceVariantDark, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.8.sp)
+                        Text("PERSONAL ASIGNADO", color = colorScheme.onSurfaceVariant, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.8.sp)
                     }
 
                     if (uiState.selectedStaff != null) {
@@ -135,18 +133,18 @@ fun ObservationsScreen(navController: NavController, viewModel: AddOrderViewMode
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(SurfaceCardDark)
+                                .background(colorScheme.surface)
                                 .padding(start = 16.dp, end = 4.dp, top = 10.dp, bottom = 10.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.Default.Person, contentDescription = null, tint = OnSurfaceVariantDark, modifier = Modifier.size(18.dp))
+                            Icon(Icons.Default.Person, contentDescription = null, tint = colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(12.dp))
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(uiState.selectedStaff!!.fullName, color = Color.White, fontSize = 14.sp)
-                                Text(uiState.selectedStaff!!.role.name, color = OnSurfaceVariantDark, fontSize = 12.sp)
+                                Text(uiState.selectedStaff!!.fullName, color = colorScheme.onSurface, fontSize = 14.sp)
+                                Text(uiState.selectedStaff!!.role.name, color = colorScheme.onSurfaceVariant, fontSize = 12.sp)
                             }
                             IconButton(onClick = { viewModel.onStaffDeselected() }, modifier = Modifier.size(36.dp)) {
-                                Icon(Icons.Default.Close, contentDescription = "Quitar", tint = OnSurfaceVariantDark, modifier = Modifier.size(16.dp))
+                                Icon(Icons.Default.Close, contentDescription = "Quitar", tint = colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
                             }
                         }
                     }
@@ -156,7 +154,7 @@ fun ObservationsScreen(navController: NavController, viewModel: AddOrderViewMode
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(12.dp))
-                            .background(SurfaceCardDark)
+                            .background(colorScheme.surface)
                             .clickable { showStaffSheet = true }
                             .padding(horizontal = 16.dp, vertical = 14.dp),
                         verticalAlignment = Alignment.CenterVertically
@@ -193,21 +191,21 @@ fun ObservationsScreen(navController: NavController, viewModel: AddOrderViewMode
         ModalBottomSheet(
             onDismissRequest = { showStaffSheet = false },
             sheetState = sheetState,
-            containerColor = SurfaceDark
+            containerColor = colorScheme.surface
         ) {
             Text(
                 "Seleccionar personal",
-                color = Color.White,
+                color = colorScheme.onSurface,
                 fontWeight = FontWeight.Bold,
                 fontSize = 16.sp,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
             )
-            HorizontalDivider(color = Color.White.copy(alpha = 0.06f), thickness = 0.5.dp)
+            HorizontalDivider(color = colorScheme.outline.copy(alpha = 0.35f), thickness = 0.5.dp)
 
             if (uiState.availableStaff.isEmpty()) {
                 Text(
                     "No hay personal disponible.",
-                    color = OnSurfaceVariantDark,
+                    color = colorScheme.onSurfaceVariant,
                     fontSize = 14.sp,
                     modifier = Modifier.padding(20.dp)
                 )
@@ -230,18 +228,18 @@ fun ObservationsScreen(navController: NavController, viewModel: AddOrderViewMode
                                 modifier = Modifier
                                     .size(36.dp)
                                     .clip(CircleShape)
-                                    .background(SurfaceCardDark),
+                                    .background(colorScheme.surfaceVariant),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(Icons.Default.Person, contentDescription = null, tint = OnSurfaceVariantDark, modifier = Modifier.size(18.dp))
+                                Icon(Icons.Default.Person, contentDescription = null, tint = colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
                             }
                             Spacer(Modifier.width(12.dp))
                             Column {
-                                Text(member.fullName, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                                Text(member.role.name, color = OnSurfaceVariantDark, fontSize = 12.sp)
+                                Text(member.fullName, color = colorScheme.onSurface, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                                Text(member.role.name, color = colorScheme.onSurfaceVariant, fontSize = 12.sp)
                             }
                         }
-                        HorizontalDivider(color = Color.White.copy(alpha = 0.06f), thickness = 0.5.dp)
+                        HorizontalDivider(color = colorScheme.outline.copy(alpha = 0.35f), thickness = 0.5.dp)
                     }
                 }
             }

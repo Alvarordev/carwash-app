@@ -29,6 +29,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -50,10 +51,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import coil.compose.AsyncImage
 import com.example.carwash.domain.model.PaymentMethod
-import com.example.carwash.ui.theme.OnSurfaceVariantDark
 import com.example.carwash.ui.theme.OrangePrimary
-import com.example.carwash.ui.theme.SurfaceCardDark
-import com.example.carwash.ui.theme.SurfaceDark
 import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -64,12 +62,12 @@ fun DeliveryBottomSheet(
     onDismiss: () -> Unit,
     onConfirm: (paymentMethod: String, photoUris: List<Uri>) -> Unit
 ) {
+    val colorScheme = MaterialTheme.colorScheme
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var selectedMethod by remember { mutableStateOf<String?>(null) }
     var photoUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
     val context = LocalContext.current
 
-    // Camera launcher
     var cameraUri by remember { mutableStateOf<Uri?>(null) }
     val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
         if (success && cameraUri != null && photoUris.size < 4) {
@@ -77,7 +75,6 @@ fun DeliveryBottomSheet(
         }
     }
 
-    // Gallery launcher
     val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null && photoUris.size < 4) {
             photoUris = photoUris + uri
@@ -87,21 +84,20 @@ fun DeliveryBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = SurfaceDark
+        containerColor = colorScheme.surface
     ) {
         Column(modifier = Modifier.padding(horizontal = 20.dp)) {
             Text(
                 "Confirmar Entrega",
-                color = Color.White,
+                color = colorScheme.onSurface,
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp,
                 modifier = Modifier.padding(bottom = 20.dp)
             )
 
-            // Payment method section
             Text(
                 "Método de pago",
-                color = OnSurfaceVariantDark,
+                color = colorScheme.onSurfaceVariant,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = 0.8.sp,
@@ -119,8 +115,8 @@ fun DeliveryBottomSheet(
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = OrangePrimary,
                             selectedLabelColor = Color.White,
-                            containerColor = SurfaceCardDark,
-                            labelColor = OnSurfaceVariantDark
+                            containerColor = colorScheme.surfaceVariant,
+                            labelColor = colorScheme.onSurfaceVariant
                         ),
                         border = FilterChipDefaults.filterChipBorder(
                             borderColor = Color.Transparent,
@@ -134,10 +130,9 @@ fun DeliveryBottomSheet(
 
             Spacer(Modifier.height(20.dp))
 
-            // Photos section
             Text(
                 "Foto de entrega (opcional)",
-                color = OnSurfaceVariantDark,
+                color = colorScheme.onSurfaceVariant,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = 0.8.sp,
@@ -192,7 +187,7 @@ fun DeliveryBottomSheet(
                                 modifier = Modifier.align(Alignment.TopEnd).size(24.dp)
                             ) {
                                 Box(
-                                    modifier = Modifier.size(20.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.7f)),
+                                    modifier = Modifier.size(20.dp).clip(CircleShape).background(colorScheme.scrim.copy(alpha = 0.7f)),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(Icons.Default.Close, contentDescription = "Quitar", tint = Color.White, modifier = Modifier.size(12.dp))
@@ -205,7 +200,6 @@ fun DeliveryBottomSheet(
 
             Spacer(Modifier.height(24.dp))
 
-            // Confirm button
             Button(
                 onClick = { selectedMethod?.let { onConfirm(it, photoUris) } },
                 enabled = selectedMethod != null && !isDelivering,

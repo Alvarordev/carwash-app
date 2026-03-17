@@ -23,9 +23,10 @@ class ThemePreferenceManager @Inject constructor(
 
     val themeFlow: Flow<ThemePreference> = context.dataStore.data.map { prefs ->
         when (prefs[themeKey]) {
+            "dark" -> ThemePreference.Dark
             "light" -> ThemePreference.Light
             "system" -> ThemePreference.System
-            else -> ThemePreference.Dark
+            else -> ThemePreference.System
         }
     }
 

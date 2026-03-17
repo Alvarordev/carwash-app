@@ -93,11 +93,7 @@ import com.example.carwash.domain.model.StaffRole
 import com.example.carwash.presentation.components.ServicePickerSheet
 import com.example.carwash.presentation.components.serviceIconDrawable
 import com.example.carwash.presentation.viewmodel.OrderDetailsViewModel
-import com.example.carwash.ui.theme.BackgroundDark
-import com.example.carwash.ui.theme.OnSurfaceVariantDark
 import com.example.carwash.ui.theme.OrangePrimary
-import com.example.carwash.ui.theme.SurfaceCardDark
-import com.example.carwash.ui.theme.SurfaceDark
 import androidx.core.graphics.toColorInt
 import kotlinx.coroutines.launch
 
@@ -109,6 +105,7 @@ fun OrderDetailsScreen(
     viewModel: OrderDetailsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val colorScheme = MaterialTheme.colorScheme
     val context = LocalContext.current
     var showStaffPicker by remember { mutableStateOf(false) }
     var showServicesPicker by remember { mutableStateOf(false) }
@@ -125,7 +122,7 @@ fun OrderDetailsScreen(
     }
 
     Scaffold(
-        containerColor = BackgroundDark,
+        containerColor = colorScheme.background,
         topBar = {
             Row(
                 modifier = Modifier
@@ -134,11 +131,11 @@ fun OrderDetailsScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver", tint = Color.White)
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver", tint = colorScheme.onBackground)
                 }
                 Text(
                     text = uiState.order?.orderNumber ?: "Detalle de Orden",
-                    color = Color.White,
+                    color = colorScheme.onBackground,
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp,
                     modifier = Modifier.weight(1f)
@@ -175,9 +172,9 @@ fun OrderDetailsScreen(
                 }
 
                 "error" -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        uiState.errorMessage ?: "Error al cargar la orden",
-                        color = OnSurfaceVariantDark,
+                        Text(
+                            uiState.errorMessage ?: "Error al cargar la orden",
+                            color = colorScheme.onSurfaceVariant,
                         fontSize = 14.sp,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.padding(horizontal = 32.dp)
@@ -198,13 +195,13 @@ fun OrderDetailsScreen(
                                         .fillMaxWidth()
                                         .padding(top = 8.dp, bottom = 4.dp)
                                         .clip(RoundedCornerShape(12.dp))
-                                        .background(Color.White.copy(alpha = 0.06f))
+                                        .background(colorScheme.surfaceVariant)
                                         .padding(horizontal = 16.dp, vertical = 12.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Icon(Icons.Default.Lock, contentDescription = null, tint = OnSurfaceVariantDark, modifier = Modifier.size(14.dp))
+                                    Icon(Icons.Default.Lock, contentDescription = null, tint = colorScheme.onSurfaceVariant, modifier = Modifier.size(14.dp))
                                     Spacer(Modifier.width(8.dp))
-                                    Text("Orden entregada · solo lectura", color = OnSurfaceVariantDark, fontSize = 12.sp)
+                                    Text("Orden entregada · solo lectura", color = colorScheme.onSurfaceVariant, fontSize = 12.sp)
                                 }
                             }
                         }
@@ -246,7 +243,7 @@ fun OrderDetailsScreen(
                             item {
                                 Text(
                                     "Sin servicios asignados",
-                                    color = OnSurfaceVariantDark,
+                                    color = colorScheme.onSurfaceVariant,
                                     fontSize = 13.sp,
                                     modifier = Modifier.padding(vertical = 8.dp)
                                 )
@@ -322,19 +319,19 @@ fun OrderDetailsScreen(
         ModalBottomSheet(
             onDismissRequest = { showStaffPicker = false },
             sheetState = rememberModalBottomSheetState(),
-            containerColor = SurfaceDark
+            containerColor = colorScheme.surface
         ) {
             Column(modifier = Modifier.padding(horizontal = 20.dp)) {
-                Text("Seleccionar Personal", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.padding(bottom = 12.dp))
+                Text("Seleccionar Personal", color = colorScheme.onSurface, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.padding(bottom = 12.dp))
                 if (available.isEmpty()) {
-                    Text("Todo el personal activo ya está asignado", color = OnSurfaceVariantDark, fontSize = 14.sp, modifier = Modifier.padding(bottom = 32.dp))
+                    Text("Todo el personal activo ya está asignado", color = colorScheme.onSurfaceVariant, fontSize = 14.sp, modifier = Modifier.padding(bottom = 32.dp))
                 } else {
                     available.forEach { member ->
                         StaffPickerRow(member = member, onClick = {
                             viewModel.addStaff(member)
                             showStaffPicker = false
                         })
-                        HorizontalDivider(color = Color.White.copy(alpha = 0.06f), thickness = 0.5.dp)
+                        HorizontalDivider(color = colorScheme.outline.copy(alpha = 0.35f), thickness = 0.5.dp)
                     }
                 }
                 Spacer(Modifier.height(32.dp))
@@ -363,7 +360,7 @@ fun OrderDetailsScreen(
             properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnBackPress = true, dismissOnClickOutside = true)
         ) {
             Box(
-                modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.95f)).clickable { selectedPhotoUrl = null },
+                modifier = Modifier.fillMaxSize().background(colorScheme.scrim.copy(alpha = 0.95f)).clickable { selectedPhotoUrl = null },
                 contentAlignment = Alignment.Center
             ) {
                 AsyncImage(model = url, contentDescription = "Foto", contentScale = ContentScale.Fit, modifier = Modifier.fillMaxWidth())
@@ -371,7 +368,7 @@ fun OrderDetailsScreen(
                     onClick = { selectedPhotoUrl = null },
                     modifier = Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(8.dp)
                 ) {
-                    Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.5f)), contentAlignment = Alignment.Center) {
+                    Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(colorScheme.scrim.copy(alpha = 0.5f)), contentAlignment = Alignment.Center) {
                         Icon(Icons.Default.Close, contentDescription = "Cerrar", tint = Color.White, modifier = Modifier.size(20.dp))
                     }
                 }
@@ -384,29 +381,31 @@ fun OrderDetailsScreen(
 
 @Composable
 private fun SectionHeader(icon: ImageVector, title: String) {
+    val colorScheme = MaterialTheme.colorScheme
     Row(
         modifier = Modifier.fillMaxWidth().padding(top = 20.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(imageVector = icon, contentDescription = null, tint = OnSurfaceVariantDark, modifier = Modifier.size(14.dp))
+        Icon(imageVector = icon, contentDescription = null, tint = colorScheme.onSurfaceVariant, modifier = Modifier.size(14.dp))
         Spacer(Modifier.width(6.dp))
-        Text(title, color = OnSurfaceVariantDark, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.8.sp)
+        Text(title, color = colorScheme.onSurfaceVariant, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.8.sp)
     }
 }
 
 @Composable
 private fun DetailCard(rows: List<Pair<String, String>>) {
-    Column(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(SurfaceCardDark)) {
+    val colorScheme = MaterialTheme.colorScheme
+    Column(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(colorScheme.surface)) {
         rows.forEachIndexed { index, (key, value) ->
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(key, color = OnSurfaceVariantDark, fontSize = 14.sp)
-                Text(value, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.End)
+                Text(key, color = colorScheme.onSurfaceVariant, fontSize = 14.sp)
+                Text(value, color = colorScheme.onSurface, fontSize = 14.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.End)
             }
-            if (index < rows.size - 1) HorizontalDivider(color = Color.White.copy(alpha = 0.06f), thickness = 0.5.dp)
+            if (index < rows.size - 1) HorizontalDivider(color = colorScheme.outline.copy(alpha = 0.35f), thickness = 0.5.dp)
         }
     }
 }
@@ -427,35 +426,36 @@ private fun HorizontalPhotoStrip(photos: List<String>, onPhotoClick: (String) ->
 
 @Composable
 private fun ServiceItemRow(item: OrderItem, isLocked: Boolean, onRemove: () -> Unit) {
+    val colorScheme = MaterialTheme.colorScheme
     val serviceIconRes = serviceIconDrawable(item.serviceIcon)
     val serviceColor = item.serviceColor?.let { hex ->
         runCatching { Color(hex.toColorInt()) }.getOrNull()
-    } ?: OnSurfaceVariantDark
+    } ?: colorScheme.onSurfaceVariant
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(SurfaceCardDark)
+            .background(colorScheme.surface)
             .padding(start = 16.dp, end = if (isLocked) 16.dp else 4.dp, top = 14.dp, bottom = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (serviceIconRes != null) {
             Icon(painter = painterResource(id = serviceIconRes), tint = serviceColor, contentDescription = null, modifier = Modifier.size(16.dp))
         } else {
-            Icon(imageVector = Icons.Default.Build, contentDescription = null, tint = OnSurfaceVariantDark, modifier = Modifier.size(16.dp))
+            Icon(imageVector = Icons.Default.Build, contentDescription = null, tint = colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
         }
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(item.serviceName, color = serviceColor, fontWeight = FontWeight.Normal, fontSize = 14.sp)
-            if (item.quantity > 1) Text("x${item.quantity}", color = OnSurfaceVariantDark, fontSize = 12.sp)
+            if (item.quantity > 1) Text("x${item.quantity}", color = colorScheme.onSurfaceVariant, fontSize = 12.sp)
         }
         if (item.subtotal > 0) {
-            Text("S/ ${"%.2f".format(item.subtotal)}", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+            Text("S/ ${"%.2f".format(item.subtotal)}", color = colorScheme.onSurface, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
         }
         if (!isLocked) {
             IconButton(onClick = onRemove, modifier = Modifier.size(36.dp)) {
-                Icon(Icons.Default.Close, contentDescription = "Quitar", tint = OnSurfaceVariantDark, modifier = Modifier.size(16.dp))
+                Icon(Icons.Default.Close, contentDescription = "Quitar", tint = colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
             }
         }
     }
@@ -463,11 +463,12 @@ private fun ServiceItemRow(item: OrderItem, isLocked: Boolean, onRemove: () -> U
 
 @Composable
 private fun AddServiceRow(onClick: () -> Unit) {
+    val colorScheme = MaterialTheme.colorScheme
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(SurfaceCardDark)
+            .background(colorScheme.surface)
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -480,23 +481,24 @@ private fun AddServiceRow(onClick: () -> Unit) {
 
 @Composable
 private fun StaffRow(staffEntry: OrderStaff, isLocked: Boolean, onRemove: () -> Unit, modifier: Modifier = Modifier) {
+    val colorScheme = MaterialTheme.colorScheme
     Row(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(SurfaceCardDark)
+            .background(colorScheme.surface)
             .padding(start = 16.dp, end = if (isLocked) 16.dp else 4.dp, top = 10.dp, bottom = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(imageVector = Icons.Default.Person, contentDescription = null, tint = OnSurfaceVariantDark, modifier = Modifier.size(18.dp))
+        Icon(imageVector = Icons.Default.Person, contentDescription = null, tint = colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(staffEntry.staffName, color = Color.White, fontSize = 14.sp)
-            staffEntry.roleSnapshot?.let { Text(it.toDisplayName(), color = OnSurfaceVariantDark, fontSize = 12.sp) }
+            Text(staffEntry.staffName, color = colorScheme.onSurface, fontSize = 14.sp)
+            staffEntry.roleSnapshot?.let { Text(it.toDisplayName(), color = colorScheme.onSurfaceVariant, fontSize = 12.sp) }
         }
         if (!isLocked) {
             IconButton(onClick = onRemove, modifier = Modifier.size(36.dp)) {
-                Icon(Icons.Default.Close, contentDescription = "Quitar", tint = OnSurfaceVariantDark, modifier = Modifier.size(16.dp))
+                Icon(Icons.Default.Close, contentDescription = "Quitar", tint = colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
             }
         }
     }
@@ -504,11 +506,12 @@ private fun StaffRow(staffEntry: OrderStaff, isLocked: Boolean, onRemove: () -> 
 
 @Composable
 private fun AddStaffRow(onClick: () -> Unit) {
+    val colorScheme = MaterialTheme.colorScheme
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(SurfaceCardDark)
+            .background(colorScheme.surface)
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -529,6 +532,7 @@ private fun StatusTimeline(
     onMarkNext: (OrderStatus) -> Unit,
     onUndo: () -> Unit
 ) {
+    val colorScheme = MaterialTheme.colorScheme
     val timelineStatuses = listOf(
         OrderStatus.EnProceso,
         OrderStatus.Lavando,
@@ -552,7 +556,7 @@ private fun StatusTimeline(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(16.dp))
-                .background(SurfaceCardDark)
+                .background(colorScheme.surface)
                 .padding(horizontal = 20.dp, vertical = 16.dp)
         ) {
             timelineStatuses.forEachIndexed { index, status ->
@@ -565,7 +569,7 @@ private fun StatusTimeline(
                     targetValue = when {
                         isPending -> OrangePrimary
                         isReached -> OrangePrimary
-                        else -> OnSurfaceVariantDark.copy(alpha = 0.3f)
+                        else -> colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
                     },
                     animationSpec = tween(300), label = "dot_$index"
                 )
@@ -599,7 +603,7 @@ private fun StatusTimeline(
                     // Status name
                     Text(
                         text = status.toDisplayLabel(),
-                        color = if (isReached || isPending) Color.White else OnSurfaceVariantDark.copy(alpha = 0.4f),
+                        color = if (isReached || isPending) colorScheme.onSurface else colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                         fontSize = 14.sp,
                         fontWeight = if (isCurrent) FontWeight.SemiBold else FontWeight.Normal,
                         modifier = Modifier.weight(1f)
@@ -611,12 +615,12 @@ private fun StatusTimeline(
                         Column(horizontalAlignment = Alignment.End) {
                             Text(
                                 text = localCreatedAt.format(dateFormatter),
-                                color = OnSurfaceVariantDark,
+                                color = colorScheme.onSurfaceVariant,
                                 fontSize = 12.sp
                             )
                             Text(
                                 text = localCreatedAt.format(timeFormatter),
-                                color = OnSurfaceVariantDark.copy(alpha = 0.7f),
+                                color = colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                                 fontSize = 11.sp
                             )
                         }
@@ -629,7 +633,7 @@ private fun StatusTimeline(
                         targetValue = if (index < currentIndex || (isCurrent && isPending))
                             OrangePrimary
                         else
-                            OnSurfaceVariantDark.copy(alpha = 0.15f),
+                            colorScheme.onSurfaceVariant.copy(alpha = 0.15f),
                         animationSpec = tween(300), label = "line_$index"
                     )
                     Box(
@@ -659,7 +663,7 @@ private fun StatusTimeline(
                         modifier = Modifier.weight(1f)
                     )
                     TextButton(onClick = onUndo) {
-                        Text("Deshacer", color = OnSurfaceVariantDark, fontSize = 13.sp)
+                        Text("Deshacer", color = colorScheme.onSurfaceVariant, fontSize = 13.sp)
                     }
                 }
             } else {
@@ -667,7 +671,7 @@ private fun StatusTimeline(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
-                        .background(SurfaceCardDark)
+                        .background(colorScheme.surface)
                         .clickable { onMarkNext(nextStatus) }
                         .padding(horizontal = 16.dp, vertical = 14.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -676,7 +680,7 @@ private fun StatusTimeline(
                     Spacer(Modifier.width(10.dp))
                     Text(
                         "Marcar como ${nextStatus.toDisplayLabel()}",
-                        color = Color.White,
+                        color = colorScheme.onSurface,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium
                     )
@@ -688,20 +692,21 @@ private fun StatusTimeline(
 
 @Composable
 private fun StaffPickerRow(member: StaffMember, onClick: () -> Unit) {
+    val colorScheme = MaterialTheme.colorScheme
     Row(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
-            modifier = Modifier.size(36.dp).clip(CircleShape).background(SurfaceCardDark),
+            modifier = Modifier.size(36.dp).clip(CircleShape).background(colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center
         ) {
-            Icon(Icons.Default.Person, contentDescription = null, tint = OnSurfaceVariantDark, modifier = Modifier.size(18.dp))
+            Icon(Icons.Default.Person, contentDescription = null, tint = colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
         }
         Spacer(Modifier.width(12.dp))
         Column {
-            Text(member.fullName, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-            Text(member.role.toDisplayName(), color = OnSurfaceVariantDark, fontSize = 12.sp)
+            Text(member.fullName, color = colorScheme.onSurface, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            Text(member.role.toDisplayName(), color = colorScheme.onSurfaceVariant, fontSize = 12.sp)
         }
     }
 }

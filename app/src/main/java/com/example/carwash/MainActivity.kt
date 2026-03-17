@@ -26,7 +26,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             val themePreference by themePreferenceManager.themeFlow
-                .collectAsState(initial = ThemePreference.Dark)
+                .collectAsState(initial = ThemePreference.System)
             val darkTheme = when (themePreference) {
                 ThemePreference.Dark -> true
                 ThemePreference.Light -> false

@@ -27,6 +27,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -44,16 +45,14 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.carwash.presentation.navigation.Screen
 import com.example.carwash.presentation.viewmodel.AddOrderViewModel
-import com.example.carwash.ui.theme.BackgroundDark
-import com.example.carwash.ui.theme.OnSurfaceVariantDark
 import com.example.carwash.ui.theme.OrangePrimary
-import com.example.carwash.ui.theme.SurfaceCardDark
 import com.example.carwash.ui.theme.StatusDone
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CustomerScreen(navController: NavController, viewModel: AddOrderViewModel) {
     val uiState by viewModel.uiState.collectAsState()
+    val colorScheme = MaterialTheme.colorScheme
 
     val customerFound = uiState.foundCustomer != null
     val canContinue = when {
@@ -65,19 +64,19 @@ fun CustomerScreen(navController: NavController, viewModel: AddOrderViewModel) {
 
     val darkFieldColors = OutlinedTextFieldDefaults.colors(
         focusedBorderColor = OrangePrimary,
-        unfocusedBorderColor = Color.White.copy(alpha = 0.15f),
+        unfocusedBorderColor = colorScheme.outline.copy(alpha = 0.6f),
         focusedLabelColor = OrangePrimary,
-        unfocusedLabelColor = OnSurfaceVariantDark,
+        unfocusedLabelColor = colorScheme.onSurfaceVariant,
         cursorColor = OrangePrimary,
-        focusedTextColor = Color.White,
-        unfocusedTextColor = Color.White,
-        disabledTextColor = Color.White.copy(alpha = 0.7f),
+        focusedTextColor = colorScheme.onSurface,
+        unfocusedTextColor = colorScheme.onSurface,
+        disabledTextColor = colorScheme.onSurface.copy(alpha = 0.7f),
         disabledBorderColor = StatusDone.copy(alpha = 0.4f),
         disabledLabelColor = StatusDone.copy(alpha = 0.7f),
         disabledContainerColor = Color.Transparent,
     )
 
-    Scaffold(containerColor = BackgroundDark) { paddingValues ->
+    Scaffold(containerColor = colorScheme.background) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -90,11 +89,11 @@ fun CustomerScreen(navController: NavController, viewModel: AddOrderViewModel) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = { navController.popBackStack() }) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Atrás", tint = Color.White)
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Atrás", tint = colorScheme.onBackground)
                 }
                 Text(
                     text = "Cliente",
-                    color = Color.White,
+                    color = colorScheme.onBackground,
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp
                 )
@@ -115,13 +114,13 @@ fun CustomerScreen(navController: NavController, viewModel: AddOrderViewModel) {
                     Icon(
                         Icons.Default.Person,
                         contentDescription = null,
-                        tint = OnSurfaceVariantDark,
+                        tint = colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(14.dp)
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(
                         "DATOS DEL CLIENTE",
-                        color = OnSurfaceVariantDark,
+                        color = colorScheme.onSurfaceVariant,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
                         letterSpacing = 0.8.sp
@@ -188,7 +187,7 @@ fun CustomerScreen(navController: NavController, viewModel: AddOrderViewModel) {
                 } else if (uiState.customerPhone.length >= 7 && !uiState.isSearchingCustomer) {
                     Text(
                         "Número no registrado. Completa los datos para crear el cliente.",
-                        color = OnSurfaceVariantDark,
+                        color = colorScheme.onSurfaceVariant,
                         fontSize = 12.sp,
                         modifier = Modifier.padding(horizontal = 2.dp)
                     )
@@ -241,7 +240,7 @@ fun CustomerScreen(navController: NavController, viewModel: AddOrderViewModel) {
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Omitir", color = OnSurfaceVariantDark, fontSize = 14.sp)
+                    Text("Omitir", color = colorScheme.onSurfaceVariant, fontSize = 14.sp)
                 }
 
                 Spacer(Modifier.height(8.dp))
