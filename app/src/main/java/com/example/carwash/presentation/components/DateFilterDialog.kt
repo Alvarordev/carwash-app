@@ -156,7 +156,7 @@ private fun DateFilterOption(
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val borderColor = if (isSelected) OrangePrimary else colorScheme.outline.copy(alpha = 0.3f)
-    val containerColor = if (isSelected) OrangePrimary.copy(alpha = 0.08f) else Color.Transparent
+    val containerColor = if (isSelected) OrangePrimary.copy(alpha = 0.08f) else MaterialTheme.colorScheme.background
     val iconTint = if (isSelected) OrangePrimary else colorScheme.onSurfaceVariant
     val textColor = if (isSelected) colorScheme.onSurface else colorScheme.onSurfaceVariant
 
@@ -169,11 +169,10 @@ private fun DateFilterOption(
             .clickable(onClick = onClick)
             .padding(vertical = 20.dp, horizontal = 8.dp)
     ) {
-        // Calendar icon with overlaid number badge
         Box(contentAlignment = Alignment.Center) {
             Icon(
                 painter = painterResource(
-                    id = if (isSelected) R.drawable.calendar_fill else R.drawable.calendar
+                    id = R.drawable.calendar
                 ),
                 contentDescription = null,
                 tint = iconTint,
@@ -185,7 +184,7 @@ private fun DateFilterOption(
                     color = iconTint,
                     fontSize = if (badgeText.length > 1) 11.sp else 13.sp,
                     fontWeight = FontWeight.Black,
-                    modifier = Modifier.padding(top = 6.dp)
+                    modifier = Modifier.padding(top = 10.dp)
                 )
             }
         }

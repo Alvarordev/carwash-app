@@ -35,8 +35,8 @@ val DangerContainerLight = Color(0xFFFDECEC)
 val DangerContentLight = Color(0xFFC62828)
 
 // Status colors
-val StatusInProgress = Color(0xFFF5D376)
-val StatusInProgressBackground = Color(0xFFC9A614)
+val StatusInProgress = Color(0xFFFCE097)
+val StatusInProgressBackground = Color(0xFFC07310)
 val StatusWashing = Color(0xFF93C5FD)
 val StatusWashingBackground = Color(0xFF1E3A8A)
 val StatusPending = Color(0xFFAD8AFA)
