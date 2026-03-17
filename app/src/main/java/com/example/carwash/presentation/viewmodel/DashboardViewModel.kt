@@ -26,7 +26,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-private const val DEFAULT_RANGE_DAYS = 6
+private const val CACHE_RANGE_DAYS = 30
 
 enum class DashboardStatusFilter(val label: String) {
     Todos("Todos"),
@@ -34,6 +34,13 @@ enum class DashboardStatusFilter(val label: String) {
     EnProceso("En proceso"),
     Terminado("Terminado"),
     Entregado("Entregado");
+}
+
+sealed class DateFilterMode {
+    object Today : DateFilterMode()
+    object Week : DateFilterMode()
+    object Month : DateFilterMode()
+    data class SpecificDate(val date: LocalDate) : DateFilterMode()
 }
 
 sealed class OrderSheetType {
@@ -50,7 +57,7 @@ data class DashboardDaySection(
 
 data class DashboardUiState(
     val allOrders: List<Order> = emptyList(),
-    val dateFilter: LocalDate? = null,
+    val dateFilterMode: DateFilterMode = DateFilterMode.Week,
     val statusFilter: DashboardStatusFilter = DashboardStatusFilter.Todos,
     val isLoading: Boolean = true,
     val errorMessage: String? = null,
@@ -59,7 +66,7 @@ data class DashboardUiState(
     val paymentMethods: List<PaymentMethod> = emptyList(),
     val isSheetSubmitting: Boolean = false
 ) {
-    val hasDateFilter: Boolean get() = dateFilter != null
+    val isDefaultFilter: Boolean get() = dateFilterMode is DateFilterMode.Week
 
     val sections: List<DashboardDaySection>
         get() {
@@ -103,17 +110,10 @@ class DashboardViewModel @Inject constructor(
         _baseState,
         _allOrders
     ) { base, allOrders ->
-        val dateFilter = base.dateFilter
-        val filtered = if (dateFilter != null) {
-            allOrders.filter { order ->
-                order.createdAt.atZoneSameInstant(limaZone).toLocalDate() == dateFilter
-            }
-        } else {
-            val startDate = today.minusDays(DEFAULT_RANGE_DAYS.toLong())
-            allOrders.filter { order ->
-                val orderDate = order.createdAt.atZoneSameInstant(limaZone).toLocalDate()
-                !orderDate.isBefore(startDate) && !orderDate.isAfter(today)
-            }
+        val (startDate, endDate) = dateRange(base.dateFilterMode)
+        val filtered = allOrders.filter { order ->
+            val orderDate = order.createdAt.atZoneSameInstant(limaZone).toLocalDate()
+            !orderDate.isBefore(startDate) && !orderDate.isAfter(endDate)
         }
         base.copy(allOrders = filtered)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), DashboardUiState())
@@ -122,7 +122,7 @@ class DashboardViewModel @Inject constructor(
         observeCache()
 
         viewModelScope.launch {
-            val startDate = today.minusDays(DEFAULT_RANGE_DAYS.toLong())
+            val startDate = today.minusDays(CACHE_RANGE_DAYS.toLong())
             orderRepository.getOrdersByDateRange(startDate, today)
                 .onSuccess { orders ->
                     _allOrders.value = orders
@@ -151,10 +151,17 @@ class DashboardViewModel @Inject constructor(
         }
     }
 
+    private fun dateRange(mode: DateFilterMode): Pair<LocalDate, LocalDate> = when (mode) {
+        is DateFilterMode.Today -> today to today
+        is DateFilterMode.Week -> today.minusDays(6) to today
+        is DateFilterMode.Month -> today.withDayOfMonth(1) to today
+        is DateFilterMode.SpecificDate -> mode.date to mode.date
+    }
+
     private fun observeCache() {
         viewModelScope.launch {
-            val startDate = today.minusDays(DEFAULT_RANGE_DAYS.toLong())
-            for (offset in 0..DEFAULT_RANGE_DAYS) {
+            val startDate = today.minusDays(CACHE_RANGE_DAYS.toLong())
+            for (offset in 0..CACHE_RANGE_DAYS) {
                 val date = startDate.plusDays(offset.toLong())
                 launch {
                     orderRepository.observeCachedOrdersByDate(date).collectLatest { dayOrders ->
@@ -184,23 +191,36 @@ class DashboardViewModel @Inject constructor(
         }
     }
 
-    fun setDateFilter(date: LocalDate?) {
-        if (date == null) {
-            _baseState.update { it.copy(dateFilter = null) }
-            return
-        }
-        val startDate = today.minusDays(DEFAULT_RANGE_DAYS.toLong())
-        if (!date.isBefore(startDate) && !date.isAfter(today)) {
-            _baseState.update { it.copy(dateFilter = date) }
-        } else {
-            _baseState.update { it.copy(dateFilter = date, isLoading = true) }
-            viewModelScope.launch {
-                orderRepository.getOrdersByDateRange(date, date)
-                    .onSuccess { orders ->
-                        _allOrders.update { current -> (current + orders).distinctBy { it.id } }
-                        _baseState.update { it.copy(isLoading = false, errorMessage = null) }
-                    }
-                    .onFailure { err -> applyLoadError(err) }
+    fun setDateFilterMode(mode: DateFilterMode) {
+        _baseState.update { it.copy(dateFilterMode = mode) }
+
+        if (mode is DateFilterMode.SpecificDate) {
+            val date = mode.date
+            val cacheStart = today.minusDays(CACHE_RANGE_DAYS.toLong())
+            if (date.isBefore(cacheStart) || date.isAfter(today)) {
+                _baseState.update { it.copy(isLoading = true) }
+                viewModelScope.launch {
+                    orderRepository.getOrdersByDateRange(date, date)
+                        .onSuccess { orders ->
+                            _allOrders.update { current -> (current + orders).distinctBy { it.id } }
+                            _baseState.update { it.copy(isLoading = false, errorMessage = null) }
+                        }
+                        .onFailure { err -> applyLoadError(err) }
+                }
+            }
+        } else if (mode is DateFilterMode.Month) {
+            val monthStart = today.withDayOfMonth(1)
+            val cacheStart = today.minusDays(CACHE_RANGE_DAYS.toLong())
+            if (monthStart.isBefore(cacheStart)) {
+                _baseState.update { it.copy(isLoading = true) }
+                viewModelScope.launch {
+                    orderRepository.getOrdersByDateRange(monthStart, cacheStart.minusDays(1))
+                        .onSuccess { orders ->
+                            _allOrders.update { current -> (current + orders).distinctBy { it.id } }
+                            _baseState.update { it.copy(isLoading = false, errorMessage = null) }
+                        }
+                        .onFailure { err -> applyLoadError(err) }
+                }
             }
         }
     }

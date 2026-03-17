@@ -11,12 +11,9 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -24,8 +21,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -38,10 +33,8 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
@@ -70,16 +63,15 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.carwash.R
+import com.example.carwash.presentation.components.DateFilterDialog
 import com.example.carwash.presentation.screens.dashboard.DashboardScreen
 import com.example.carwash.presentation.screens.orders.OrderDetailsScreen
 import com.example.carwash.presentation.screens.orders.OrdersScreen
 import com.example.carwash.presentation.screens.settings.SettingsScreen
 import com.example.carwash.presentation.viewmodel.DashboardStatusFilter
 import com.example.carwash.presentation.viewmodel.DashboardViewModel
+import com.example.carwash.presentation.viewmodel.DateFilterMode
 import com.example.carwash.ui.theme.OrangePrimary
-import java.time.Instant
-import java.time.LocalDate
-import java.time.ZoneId
 
 private data class MainScaffoldConfig(
     val title: String,
@@ -259,7 +251,8 @@ fun MainScreen(onAddOrder: () -> Unit) {
 private fun DashboardTopBar(viewModel: DashboardViewModel) {
     val uiState by viewModel.uiState.collectAsState()
     val colorScheme = MaterialTheme.colorScheme
-    var showDatePicker by remember { mutableStateOf(false) }
+    var showFilterDialog by remember { mutableStateOf(false) }
+    val isNonDefault = !uiState.isDefaultFilter
 
     Column(modifier = Modifier.background(colorScheme.surface)) {
         TopAppBar(
@@ -271,20 +264,14 @@ private fun DashboardTopBar(viewModel: DashboardViewModel) {
                 )
             },
             actions = {
-                IconButton(onClick = {
-                    if (uiState.hasDateFilter) {
-                        viewModel.setDateFilter(null)
-                    } else {
-                        showDatePicker = true
-                    }
-                }) {
+                IconButton(onClick = { showFilterDialog = true }) {
                     Icon(
                         painter = painterResource(
-                            id = if (uiState.hasDateFilter) R.drawable.calendar_fill
+                            id = if (isNonDefault) R.drawable.calendar_fill
                                  else R.drawable.calendar
                         ),
                         contentDescription = "Filtrar por fecha",
-                        tint = if (uiState.hasDateFilter) OrangePrimary
+                        tint = if (isNonDefault) OrangePrimary
                                else colorScheme.onSurface,
                         modifier = Modifier.size(22.dp)
                     )
@@ -334,48 +321,15 @@ private fun DashboardTopBar(viewModel: DashboardViewModel) {
         }
     }
 
-    if (showDatePicker) {
-        DashboardDatePickerDialog(
-            onDateSelected = { date ->
-                viewModel.setDateFilter(date)
-                showDatePicker = false
+    if (showFilterDialog) {
+        DateFilterDialog(
+            currentMode = uiState.dateFilterMode,
+            onModeSelected = { mode ->
+                viewModel.setDateFilterMode(mode)
+                showFilterDialog = false
             },
-            onDismiss = { showDatePicker = false }
+            onDismiss = { showFilterDialog = false }
         )
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun DashboardDatePickerDialog(
-    onDateSelected: (LocalDate) -> Unit,
-    onDismiss: () -> Unit
-) {
-    val datePickerState = rememberDatePickerState()
-
-    DatePickerDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    datePickerState.selectedDateMillis?.let { millis ->
-                        val date = Instant.ofEpochMilli(millis)
-                            .atZone(ZoneId.of("UTC"))
-                            .toLocalDate()
-                        onDateSelected(date)
-                    }
-                }
-            ) {
-                Text("Seleccionar", color = OrangePrimary)
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancelar")
-            }
-        }
-    ) {
-        DatePicker(state = datePickerState)
     }
 }
 

@@ -71,7 +71,7 @@ fun DashboardScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = if (uiState.hasDateFilter) "No hay ordenes para esta fecha"
+                        text = if (!uiState.isDefaultFilter) "No hay ordenes para este periodo"
                                else "No hay ordenes recientes",
                         color = colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodyMedium
