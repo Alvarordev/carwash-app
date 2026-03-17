@@ -1,5 +1,7 @@
 package com.example.carwash.presentation.navigation
 
+import android.app.Activity
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInVertically
@@ -29,6 +31,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -57,6 +60,16 @@ const val MAIN_ROUTE = "main"
 const val ADD_ORDER_GRAPH_ROUTE = "add_order_graph"
 const val AUTH_GRAPH_ROUTE = "auth_graph"
 
+private val authRoutes = setOf(BOOTSTRAP_ROUTE, AUTH_GRAPH_ROUTE, Screen.Login.route)
+private val addOrderRoutes = setOf(
+    Screen.AddOrderPhoto.route,
+    Screen.AddOrderVehicle.route,
+    Screen.AddOrderCustomer.route,
+    Screen.AddOrderServices.route,
+    Screen.AddOrderObservations.route,
+    Screen.AddOrderSummary.route,
+)
+
 @Composable
 fun RootNavigation(
     networkMonitor: NetworkMonitor,
@@ -66,32 +79,49 @@ fun RootNavigation(
     val appSessionState by authViewModel.appSessionState.collectAsState()
     val isOnline by networkMonitor.isOnline.collectAsState()
     val currentRoute = rootNavController.currentBackStackEntryAsState().value?.destination?.route
+    val context = LocalContext.current
 
-    LaunchedEffect(appSessionState) {
+    BackHandler(
+        enabled = appSessionState is AppSessionState.Authenticated && currentRoute == MAIN_ROUTE
+    ) {
+        (context as? Activity)?.finish()
+    }
+
+    LaunchedEffect(appSessionState, currentRoute) {
         when (appSessionState) {
             is AppSessionState.Restoring -> {
                 if (currentRoute != BOOTSTRAP_ROUTE) {
                     rootNavController.navigate(BOOTSTRAP_ROUTE) {
-                        popUpTo(rootNavController.graph.findStartDestination().id) { inclusive = true }
+                        popUpTo(BOOTSTRAP_ROUTE) { inclusive = true }
                         launchSingleTop = true
+                        restoreState = false
                     }
                 }
             }
 
             is AppSessionState.Authenticated -> {
-                if (currentRoute != MAIN_ROUTE) {
+                if (currentRoute in authRoutes) {
                     rootNavController.navigate(MAIN_ROUTE) {
-                        popUpTo(rootNavController.graph.findStartDestination().id) { inclusive = true }
+                        popUpTo(BOOTSTRAP_ROUTE) { inclusive = true }
                         launchSingleTop = true
+                        restoreState = false
                     }
                 }
             }
 
             is AppSessionState.Unauthenticated -> {
-                if (currentRoute != AUTH_GRAPH_ROUTE && currentRoute != Screen.Login.route) {
+                if (currentRoute !in authRoutes) {
                     rootNavController.navigate(AUTH_GRAPH_ROUTE) {
-                        popUpTo(rootNavController.graph.findStartDestination().id) { inclusive = true }
+                        when {
+                            currentRoute == MAIN_ROUTE || currentRoute in addOrderRoutes -> {
+                                popUpTo(MAIN_ROUTE) { inclusive = true }
+                            }
+                            else -> {
+                                popUpTo(BOOTSTRAP_ROUTE) { inclusive = true }
+                            }
+                        }
                         launchSingleTop = true
+                        restoreState = false
                     }
                 }
             }

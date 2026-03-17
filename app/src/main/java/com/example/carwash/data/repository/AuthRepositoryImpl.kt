@@ -38,7 +38,7 @@ class AuthRepositoryImpl @Inject constructor(
                 when (status) {
                     is SessionStatus.Authenticated -> reconcileSession(forceBlocking = !companySession.isResolved)
                     is SessionStatus.Initializing -> {
-                        if (_appSessionState.value !is AppSessionState.Authenticated) {
+                        if (_appSessionState.value !is AppSessionState.Authenticated && client.auth.currentSessionOrNull() == null) {
                             _appSessionState.value = AppSessionState.Restoring
                         }
                     }
@@ -100,7 +100,7 @@ class AuthRepositoryImpl @Inject constructor(
                     staffMemberId = companySession.staffMemberId,
                     isReconciling = companySession.staffMemberId == null
                 )
-            } else {
+            } else if (_appSessionState.value !is AppSessionState.Authenticated) {
                 _appSessionState.value = AppSessionState.Restoring
             }
 
