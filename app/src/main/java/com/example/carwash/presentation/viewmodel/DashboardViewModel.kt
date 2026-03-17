@@ -26,7 +26,15 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-private const val DATE_RANGE_DAYS = 29
+private const val DEFAULT_RANGE_DAYS = 6
+
+enum class DashboardStatusFilter(val label: String) {
+    Todos("Todos"),
+    Pendiente("Pendiente"),
+    EnProceso("En proceso"),
+    Terminado("Terminado"),
+    Entregado("Entregado");
+}
 
 sealed class OrderSheetType {
     object None : OrderSheetType()
@@ -35,9 +43,15 @@ sealed class OrderSheetType {
     data class Delivery(val order: Order) : OrderSheetType()
 }
 
+data class DashboardDaySection(
+    val date: LocalDate,
+    val orders: List<Order>
+)
+
 data class DashboardUiState(
-    val orders: List<Order> = emptyList(),
-    val selectedDate: LocalDate = LocalDate.now(ZoneId.of("America/Lima")),
+    val allOrders: List<Order> = emptyList(),
+    val dateFilter: LocalDate? = null,
+    val statusFilter: DashboardStatusFilter = DashboardStatusFilter.Todos,
     val isLoading: Boolean = true,
     val errorMessage: String? = null,
     val sheetType: OrderSheetType = OrderSheetType.None,
@@ -45,8 +59,31 @@ data class DashboardUiState(
     val paymentMethods: List<PaymentMethod> = emptyList(),
     val isSheetSubmitting: Boolean = false
 ) {
-    val activeOrders: List<Order>
-        get() = orders.filter { it.status != OrderStatus.Anulado }
+    val hasDateFilter: Boolean get() = dateFilter != null
+
+    val sections: List<DashboardDaySection>
+        get() {
+            val limaZone = ZoneId.of("America/Lima")
+            val filtered = allOrders
+                .filter { it.status != OrderStatus.Anulado }
+                .filter { order ->
+                    when (statusFilter) {
+                        DashboardStatusFilter.Todos -> true
+                        DashboardStatusFilter.Pendiente -> order.status == OrderStatus.EnProceso
+                        DashboardStatusFilter.EnProceso -> order.status == OrderStatus.Lavando
+                        DashboardStatusFilter.Terminado -> order.status == OrderStatus.Terminado
+                        DashboardStatusFilter.Entregado -> order.status == OrderStatus.Entregado
+                    }
+                }
+
+            return filtered
+                .groupBy { it.createdAt.atZoneSameInstant(limaZone).toLocalDate() }
+                .entries
+                .sortedByDescending { it.key }
+                .map { (date, orders) -> DashboardDaySection(date, orders) }
+        }
+
+    val isEmpty: Boolean get() = sections.isEmpty() && !isLoading && errorMessage == null
 }
 
 @HiltViewModel
@@ -66,38 +103,41 @@ class DashboardViewModel @Inject constructor(
         _baseState,
         _allOrders
     ) { base, allOrders ->
-        val filtered = allOrders.filter { order ->
-            order.createdAt.atZoneSameInstant(limaZone).toLocalDate() == base.selectedDate
+        val dateFilter = base.dateFilter
+        val filtered = if (dateFilter != null) {
+            allOrders.filter { order ->
+                order.createdAt.atZoneSameInstant(limaZone).toLocalDate() == dateFilter
+            }
+        } else {
+            val startDate = today.minusDays(DEFAULT_RANGE_DAYS.toLong())
+            allOrders.filter { order ->
+                val orderDate = order.createdAt.atZoneSameInstant(limaZone).toLocalDate()
+                !orderDate.isBefore(startDate) && !orderDate.isAfter(today)
+            }
         }
-        base.copy(orders = filtered)
+        base.copy(allOrders = filtered)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), DashboardUiState())
 
     init {
         observeCache()
 
         viewModelScope.launch {
-            val startDate = today.minusDays(DATE_RANGE_DAYS.toLong())
+            val startDate = today.minusDays(DEFAULT_RANGE_DAYS.toLong())
             orderRepository.getOrdersByDateRange(startDate, today)
                 .onSuccess { orders ->
                     _allOrders.value = orders
                     _baseState.update { it.copy(isLoading = false, errorMessage = null) }
                 }
-                .onFailure { err ->
-                    applyLoadError(err)
-                }
+                .onFailure { err -> applyLoadError(err) }
         }
 
         viewModelScope.launch {
             orderRepository.observeOrdersByDate(today)
-                .catch { err ->
-                    applyLoadError(err)
-                }
+                .catch { err -> applyLoadError(err) }
                 .collect { result ->
                     result
                         .onSuccess { _baseState.update { it.copy(isLoading = false, errorMessage = null) } }
-                        .onFailure { err ->
-                            applyLoadError(err)
-                        }
+                        .onFailure { err -> applyLoadError(err) }
                 }
         }
 
@@ -113,8 +153,8 @@ class DashboardViewModel @Inject constructor(
 
     private fun observeCache() {
         viewModelScope.launch {
-            val startDate = today.minusDays(DATE_RANGE_DAYS.toLong())
-            for (offset in 0..DATE_RANGE_DAYS) {
+            val startDate = today.minusDays(DEFAULT_RANGE_DAYS.toLong())
+            for (offset in 0..DEFAULT_RANGE_DAYS) {
                 val date = startDate.plusDays(offset.toLong())
                 launch {
                     orderRepository.observeCachedOrdersByDate(date).collectLatest { dayOrders ->
@@ -139,15 +179,34 @@ class DashboardViewModel @Inject constructor(
                 isLoading = false,
                 errorMessage = if (_allOrders.value.isEmpty()) {
                     error.toUserMessage("No pudimos cargar el dashboard. Intenta de nuevo.")
-                } else {
-                    null
-                }
+                } else null
             )
         }
     }
 
-    fun selectDate(date: LocalDate) {
-        _baseState.update { it.copy(selectedDate = date) }
+    fun setDateFilter(date: LocalDate?) {
+        if (date == null) {
+            _baseState.update { it.copy(dateFilter = null) }
+            return
+        }
+        val startDate = today.minusDays(DEFAULT_RANGE_DAYS.toLong())
+        if (!date.isBefore(startDate) && !date.isAfter(today)) {
+            _baseState.update { it.copy(dateFilter = date) }
+        } else {
+            _baseState.update { it.copy(dateFilter = date, isLoading = true) }
+            viewModelScope.launch {
+                orderRepository.getOrdersByDateRange(date, date)
+                    .onSuccess { orders ->
+                        _allOrders.update { current -> (current + orders).distinctBy { it.id } }
+                        _baseState.update { it.copy(isLoading = false, errorMessage = null) }
+                    }
+                    .onFailure { err -> applyLoadError(err) }
+            }
+        }
+    }
+
+    fun setStatusFilter(filter: DashboardStatusFilter) {
+        _baseState.update { it.copy(statusFilter = filter) }
     }
 
     fun onCardAction(order: Order) {

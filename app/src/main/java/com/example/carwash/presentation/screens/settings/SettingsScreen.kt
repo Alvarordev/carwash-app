@@ -30,7 +30,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -46,10 +45,11 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.carwash.domain.model.ThemePreference
 import com.example.carwash.presentation.viewmodel.SettingsViewModel
-import com.example.carwash.ui.theme.BackgroundDark
+import com.example.carwash.ui.theme.DangerContainerDark
+import com.example.carwash.ui.theme.DangerContainerLight
+import com.example.carwash.ui.theme.DangerContentLight
 import com.example.carwash.ui.theme.OrangePrimary
-import com.example.carwash.ui.theme.SurfaceCardDark
-import com.example.carwash.ui.theme.OnSurfaceVariantDark
+import com.example.carwash.ui.theme.BackgroundDark
 
 @Composable
 fun SettingsScreen(
@@ -57,40 +57,32 @@ fun SettingsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    Scaffold(
-        containerColor = BackgroundDark
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-        ) {
-            // Profile header
-            ProfileHeader(
-                fullName = uiState.userFullName,
-                role = uiState.userRole,
-                isLoading = uiState.isLoadingProfile
-            )
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+    ) {
+        ProfileHeader(
+            fullName = uiState.userFullName,
+            role = uiState.userRole,
+            isLoading = uiState.isLoadingProfile
+        )
 
-            Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
-            // Theme section
-            SectionHeader(title = "Apariencia")
-            ThemeSelector(
-                currentTheme = uiState.themePreference,
-                onThemeSelected = viewModel::setTheme
-            )
+        SectionHeader(title = "Apariencia")
+        ThemeSelector(
+            currentTheme = uiState.themePreference,
+            onThemeSelected = viewModel::setTheme
+        )
 
-            Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
-            // Sign out
-            SectionHeader(title = "Cuenta")
-            Spacer(modifier = Modifier.height(8.dp))
-            SignOutButton(onSignOut = viewModel::signOut)
+        SectionHeader(title = "Cuenta")
+        Spacer(modifier = Modifier.height(8.dp))
+        SignOutButton(onSignOut = viewModel::signOut)
 
-            Spacer(modifier = Modifier.height(32.dp))
-        }
+        Spacer(modifier = Modifier.height(32.dp))
     }
 }
 
@@ -100,6 +92,7 @@ private fun ProfileHeader(
     role: String,
     isLoading: Boolean
 ) {
+    val colorScheme = MaterialTheme.colorScheme
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -152,14 +145,14 @@ private fun ProfileHeader(
             Text(
                 text = "Cargando perfil...",
                 style = MaterialTheme.typography.bodyMedium,
-                color = OnSurfaceVariantDark
+                color = colorScheme.onSurfaceVariant
             )
         } else {
             Text(
                 text = fullName.ifEmpty { "Usuario" },
                 style = MaterialTheme.typography.headlineSmall.copy(
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = colorScheme.onSurface
                 )
             )
             if (role.isNotEmpty()) {
@@ -187,7 +180,7 @@ private fun SectionHeader(title: String) {
     Text(
         text = title,
         style = MaterialTheme.typography.labelLarge.copy(
-            color = OnSurfaceVariantDark,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = FontWeight.SemiBold,
             letterSpacing = 0.5.sp
         ),
@@ -233,9 +226,10 @@ private fun ThemeOption(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val backgroundColor = if (isSelected) OrangePrimary.copy(alpha = 0.12f) else SurfaceCardDark
+    val colorScheme = MaterialTheme.colorScheme
+    val backgroundColor = if (isSelected) OrangePrimary.copy(alpha = 0.12f) else colorScheme.surface
     val borderColor = if (isSelected) OrangePrimary else Color.Transparent
-    val contentColor = if (isSelected) OrangePrimary else OnSurfaceVariantDark
+    val contentColor = if (isSelected) OrangePrimary else colorScheme.onSurfaceVariant
 
     Column(
         modifier = modifier
@@ -265,6 +259,10 @@ private fun ThemeOption(
 
 @Composable
 private fun SignOutButton(onSignOut: () -> Unit) {
+    val colorScheme = MaterialTheme.colorScheme
+    val containerColor = if (colorScheme.background == BackgroundDark) DangerContainerDark else DangerContainerLight
+    val contentColor = if (colorScheme.background == BackgroundDark) DangerContentLight else DangerContentLight
+
     Button(
         onClick = onSignOut,
         modifier = Modifier
@@ -273,8 +271,8 @@ private fun SignOutButton(onSignOut: () -> Unit) {
             .height(52.dp),
         shape = RoundedCornerShape(14.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = Color(0xFF2D1A1A),
-            contentColor = Color(0xFFE53935)
+            containerColor = containerColor,
+            contentColor = contentColor
         )
     ) {
         Icon(

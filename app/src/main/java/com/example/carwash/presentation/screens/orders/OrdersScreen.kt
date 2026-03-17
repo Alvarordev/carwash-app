@@ -19,13 +19,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -41,122 +38,107 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.carwash.domain.model.OrderPeriod
 import com.example.carwash.presentation.components.OrderListCard
 import com.example.carwash.presentation.viewmodel.OrdersViewModel
-import com.example.carwash.ui.theme.BackgroundDark
-import com.example.carwash.ui.theme.OnSurfaceVariantDark
 import com.example.carwash.ui.theme.OrangePrimary
-import com.example.carwash.ui.theme.SurfaceCardDark
 
 @Composable
 fun OrdersScreen(
-    onAddOrder: () -> Unit,
     onOrderClick: (String) -> Unit = {},
     viewModel: OrdersViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val colorScheme = MaterialTheme.colorScheme
 
-    Scaffold(
-        containerColor = BackgroundDark,
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = onAddOrder,
-                containerColor = OrangePrimary,
-                shape = CircleShape
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(colorScheme.background)
+            .padding(horizontal = 20.dp)
+    ) {
+        Spacer(Modifier.height(20.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Órdenes",
+                color = colorScheme.onBackground,
+                fontWeight = FontWeight.Bold,
+                fontSize = 22.sp,
+                modifier = Modifier.weight(1f)
+            )
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(colorScheme.surface),
+                contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Nueva orden", tint = Color.White)
+                Icon(
+                    imageVector = Icons.Default.FilterList,
+                    contentDescription = "Filtrar",
+                    tint = colorScheme.onSurface,
+                    modifier = Modifier.size(20.dp)
+                )
             }
         }
-    ) { _ ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 20.dp)
-        ) {
-            Spacer(Modifier.height(24.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Órdenes",
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 22.sp,
-                    modifier = Modifier.weight(1f)
-                )
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(SurfaceCardDark),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.FilterList,
-                        contentDescription = "Filtrar",
-                        tint = Color.White,
-                        modifier = Modifier.size(20.dp)
+        Spacer(Modifier.height(20.dp))
+
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            PeriodPill(
+                label = "Hoy",
+                selected = uiState.selectedPeriod == OrderPeriod.Today,
+                onClick = { viewModel.selectPeriod(OrderPeriod.Today) }
+            )
+            PeriodPill(
+                label = "Esta Semana",
+                selected = uiState.selectedPeriod == OrderPeriod.ThisWeek,
+                onClick = { viewModel.selectPeriod(OrderPeriod.ThisWeek) }
+            )
+            PeriodPill(
+                label = "Este Mes",
+                selected = uiState.selectedPeriod == OrderPeriod.ThisMonth,
+                onClick = { viewModel.selectPeriod(OrderPeriod.ThisMonth) }
+            )
+        }
+
+        Spacer(Modifier.height(20.dp))
+
+        when {
+            uiState.isLoading -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = OrangePrimary)
+                }
+            }
+            uiState.errorMessage != null -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(
+                        text = uiState.errorMessage ?: "Error",
+                        color = colorScheme.onSurfaceVariant,
+                        fontSize = 14.sp
                     )
                 }
             }
-
-            Spacer(Modifier.height(20.dp))
-
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                PeriodPill(
-                    label = "Hoy",
-                    selected = uiState.selectedPeriod == OrderPeriod.Today,
-                    onClick = { viewModel.selectPeriod(OrderPeriod.Today) }
-                )
-                PeriodPill(
-                    label = "Esta Semana",
-                    selected = uiState.selectedPeriod == OrderPeriod.ThisWeek,
-                    onClick = { viewModel.selectPeriod(OrderPeriod.ThisWeek) }
-                )
-                PeriodPill(
-                    label = "Este Mes",
-                    selected = uiState.selectedPeriod == OrderPeriod.ThisMonth,
-                    onClick = { viewModel.selectPeriod(OrderPeriod.ThisMonth) }
-                )
+            uiState.orders.isEmpty() -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(
+                        text = "No hay órdenes para este período",
+                        color = colorScheme.onSurfaceVariant,
+                        fontSize = 14.sp
+                    )
+                }
             }
-
-            Spacer(Modifier.height(20.dp))
-
-            when {
-                uiState.isLoading -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = OrangePrimary)
-                    }
-                }
-                uiState.errorMessage != null -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(
-                            text = uiState.errorMessage ?: "Error",
-                            color = OnSurfaceVariantDark,
-                            fontSize = 14.sp
+            else -> {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(24.dp),
+                    contentPadding = PaddingValues(bottom = 96.dp)
+                ) {
+                    items(uiState.orders) { order ->
+                        OrderListCard(
+                            order = order,
+                            modifier = Modifier.clickable { onOrderClick(order.id) }
                         )
-                    }
-                }
-                uiState.orders.isEmpty() -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(
-                            text = "No hay órdenes para este período",
-                            color = OnSurfaceVariantDark,
-                            fontSize = 14.sp
-                        )
-                    }
-                }
-                else -> {
-                    LazyColumn(
-                        verticalArrangement = Arrangement.spacedBy(24.dp),
-                        contentPadding = PaddingValues(bottom = 80.dp)
-                    ) {
-                        items(uiState.orders) { order ->
-                            OrderListCard(
-                                order = order,
-                                modifier = Modifier.clickable { onOrderClick(order.id) }
-                            )
-                        }
                     }
                 }
             }
@@ -170,16 +152,17 @@ private fun PeriodPill(
     selected: Boolean,
     onClick: () -> Unit
 ) {
+    val colorScheme = MaterialTheme.colorScheme
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(20.dp))
-            .background(if (selected) OrangePrimary else SurfaceCardDark)
+            .background(if (selected) OrangePrimary else colorScheme.surface)
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
         Text(
             text = label,
-            color = if (selected) Color.White else OnSurfaceVariantDark,
+            color = if (selected) Color.White else colorScheme.onSurfaceVariant,
             fontSize = 13.sp,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
         )
